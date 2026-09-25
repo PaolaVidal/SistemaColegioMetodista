@@ -4,15 +4,15 @@ services:
     container_name: cma_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: cma_database
+      POSTGRES_DB: ColegioMetodistaDB
       POSTGRES_USER: cma_user
-      POSTGRES_PASSWORD: secretpassword
+      POSTGRES_PASSWORD: password123
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cma_user -d cma_database"]
+      test: ["CMD-SHELL", "pg_isready -U cma_user -d ColegioMetodistaDB"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -42,15 +42,13 @@ services:
       DB_CONNECTION: pgsql
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_DATABASE: cma_database
+      DB_DATABASE: ColegioMetodistaDB
       DB_USERNAME: cma_user
-      DB_PASSWORD: secretpassword
+      DB_PASSWORD: password123
       CACHE_DRIVER: file
       QUEUE_CONNECTION: sync
       SESSION_DRIVER: file
-    command: >
-      sh -c "php artisan migrate --force
-      && php artisan serve --host=0.0.0.0 --port=8000"
+    command: php artisan serve --host=0.0.0.0 --port=8000
     networks:
       - cma_network
 
