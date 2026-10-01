@@ -31,6 +31,16 @@ return new class extends Migration
             $table->index('subido_por');
         });
 
+        Schema::create('documentos_docentes', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('id_docente')->constrained('docente')->cascadeOnDelete();
+            $table->string('tipo_documento', 30);
+            $table->text('nombre_archivo');
+            $table->text('ruta_archivo');
+            $table->timestamp('fecha_subida')->useCurrent();
+            $table->index('id_docente');
+        });
+
         Schema::create('anuncios', function (Blueprint $table) {
             $table->id();
             $table->foreignId('autor_id')->constrained('usuarios')->restrictOnDelete();
@@ -74,6 +84,7 @@ return new class extends Migration
         Schema::dropIfExists('auditoria');
         Schema::dropIfExists('notificaciones');
         Schema::dropIfExists('anuncios');
+        Schema::dropIfExists('documentos_docentes');
         Schema::dropIfExists('documentos_estudiantes');
         Schema::dropIfExists('demeritos');
     }
