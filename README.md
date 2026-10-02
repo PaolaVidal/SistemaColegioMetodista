@@ -62,7 +62,7 @@ Docker Compose:
 
   Notas:
 - No se han implementado funcionalidades aún; sólo la estructura inicial.
-- Requisitos locales: Node.js (>=20.19 recomendado), npm, PHP 8.1, Composer y Docker Desktop o Docker Engine activos.
+- Requisitos locales: Node.js (>=20.19 recomendado), npm, PHP 8.2, Composer y Docker Desktop o Docker Engine activos.
 
 CI/CD y pruebas:
 - Cada pull request hacia `main` ejecuta lint y build del frontend, PHPUnit, Pint, auditoría de Composer y validación de Docker Compose.
