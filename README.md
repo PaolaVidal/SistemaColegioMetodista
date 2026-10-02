@@ -63,3 +63,10 @@ Docker Compose:
   Notas:
 - No se han implementado funcionalidades aún; sólo la estructura inicial.
 - Requisitos locales: Node.js (>=20.19 recomendado), npm, PHP 8.1, Composer y Docker Desktop o Docker Engine activos.
+
+CI/CD y pruebas:
+- Cada pull request hacia `main` ejecuta lint y build del frontend, PHPUnit, Pint, auditoría de Composer y validación de Docker Compose.
+- El workflow de integración usa PostgreSQL 16 y ejecuta las migraciones antes de los tests del backend.
+- Los tags con formato `vX.Y.Z` construyen y publican las imágenes backend/frontend en GHCR y las escanean con Trivy.
+- El despliegue productivo permanece desactivado hasta definir el proveedor, el environment protegido y la estrategia de rollback.
+- Validación local del pipeline: `docker compose config`, `docker compose -f docker-compose.ci.yml config`, `cd frontend; npm ci; npm run lint; npm run build` y `cd backend; php artisan test; vendor/bin/pint --test`.
