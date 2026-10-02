@@ -1,0 +1,61 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: colegio_testing
+      POSTGRES_USER: cma_user
+      POSTGRES_PASSWORD: cma_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cma_user -d colegio_testing"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - cma_ci
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      APP_ENV: testing
+      APP_KEY: base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+      APP_DEBUG: "false"
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: colegio_testing
+      DB_USERNAME: cma_user
+      DB_PASSWORD: cma_password
+      CACHE_DRIVER: array
+      QUEUE_CONNECTION: sync
+      SESSION_DRIVER: array
+      MAIL_MAILER: array
+    command: >-
+      sh -c "php artisan migrate --force && php artisan serve
+      --host=0.0.0.0 --port=8000"
+    ports:
+      - "8000:8000"
+    networks:
+      - cma_ci
+
+  frontend:
+    image: node:20.19-alpine
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://backend:8000
+    command: sh -c "npm ci && npm run build"
+    networks:
+      - cma_ci
+
+networks:
+  cma_ci:
+    driver: bridge

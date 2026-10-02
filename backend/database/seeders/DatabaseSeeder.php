@@ -136,10 +136,10 @@ class DatabaseSeeder extends Seeder
                     'certificado' => true,
                     'boleta_calificaciones' => true,
                     'fotocopia_dui' => true,
-                    'numero_partida_nacimiento' => 'PART-' . str_pad((string) $studentId, 6, '0', STR_PAD_LEFT),
+                    'numero_partida_nacimiento' => 'PART-'.str_pad((string) $studentId, 6, '0', STR_PAD_LEFT),
                     'folio_partida_nacimiento' => (string) (100 + $index),
-                    'tomo_partida_nacimiento' => 'TOMO-' . (1 + ($index % 5)),
-                    'libro_partida_nacimiento' => 'LIBRO-' . (1 + ($index % 3)),
+                    'tomo_partida_nacimiento' => 'TOMO-'.(1 + ($index % 5)),
+                    'libro_partida_nacimiento' => 'LIBRO-'.(1 + ($index % 3)),
                     'carta_pastoral' => $index % 4 !== 0,
                     'nombre_iglesia_asiste' => $index % 4 !== 0 ? 'Iglesia Metodista Central' : null,
                     'nombre_madre' => $isFemale ? 'María' : 'Ana',
@@ -351,7 +351,7 @@ class DatabaseSeeder extends Seeder
                         'concepto' => 'Abono mensualidad',
                         'monto_pago' => 40,
                         'fecha_pago' => now()->subDays(2)->toDateString(),
-                        'numero_comprobante' => 'COMP-' . str_pad((string) $studentId, 6, '0', STR_PAD_LEFT),
+                        'numero_comprobante' => 'COMP-'.str_pad((string) $studentId, 6, '0', STR_PAD_LEFT),
                     ]);
                 }
             }
