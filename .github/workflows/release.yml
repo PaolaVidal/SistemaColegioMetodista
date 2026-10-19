@@ -34,7 +34,7 @@ jobs:
 
       - name: Docker metadata backend
         id: backend-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/sistema-colegio-metodista-backend
           tags: |
@@ -43,7 +43,7 @@ jobs:
 
       - name: Docker metadata frontend
         id: frontend-meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@v6
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/sistema-colegio-metodista-frontend
           tags: |
