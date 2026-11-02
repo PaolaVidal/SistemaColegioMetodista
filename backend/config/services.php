@@ -31,4 +31,10 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'n8n' => [
+        'payment_webhook_url' => env('N8N_PAYMENT_WEBHOOK_URL'),
+        'academic_webhook_url' => env('N8N_ACADEMIC_WEBHOOK_URL'),
+        'overdue_webhook_url' => env('N8N_OVERDUE_WEBHOOK_URL'),
+    ],
+
 ];
