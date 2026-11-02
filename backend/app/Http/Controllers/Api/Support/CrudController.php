@@ -22,7 +22,7 @@ abstract class CrudController extends Controller
         $consulta = app(ResourcePolicy::class)->consulta($request->user(), $this->tabla);
 
         foreach ((array) $request->query('filtros', []) as $campo => $valor) {
-            if (!in_array($campo, $columnas, true) || !is_scalar($valor)) {
+            if (! in_array($campo, $columnas, true) || ! is_scalar($valor)) {
                 throw ValidationException::withMessages(['filtros' => 'El filtro solicitado no es válido.']);
             }
             $consulta->where($campo, $valor);
@@ -30,7 +30,7 @@ abstract class CrudController extends Controller
 
         $orden = $request->query('orden', 'id');
         $direccion = strtolower((string) $request->query('direccion', 'asc'));
-        if (!in_array($orden, $columnas, true) || !in_array($direccion, ['asc', 'desc'], true)) {
+        if (! in_array($orden, $columnas, true) || ! in_array($direccion, ['asc', 'desc'], true)) {
             throw ValidationException::withMessages(['orden' => 'El orden solicitado no es válido.']);
         }
 
@@ -70,6 +70,7 @@ abstract class CrudController extends Controller
         $politica = app(ResourcePolicy::class);
         $usuario = request()->user();
         abort_unless($politica->visible($usuario, $this->tabla, $registro), 404, 'Registro no encontrado.');
+
         return response()->json($this->presentar($this->buscar($registro)));
     }
 
@@ -81,7 +82,7 @@ abstract class CrudController extends Controller
             $actualizado = DB::transaction(function () use ($request, $registro) {
                 $this->contextoAuditoria();
                 $actual = app(ResourcePolicy::class)->aplicarAlcance(DB::table($this->tabla), $request->user(), $this->tabla)
-                    ->where($this->tabla . '.id', $registro)->lockForUpdate()->first();
+                    ->where($this->tabla.'.id', $registro)->lockForUpdate()->first();
                 abort_if($actual === null, 404, 'Registro no encontrado.');
                 $datos = $this->validar($request, true);
                 $this->validarNegocio($datos, $actual);
@@ -111,7 +112,7 @@ abstract class CrudController extends Controller
             DB::transaction(function () use ($registro) {
                 $this->contextoAuditoria();
                 $actual = app(ResourcePolicy::class)->aplicarAlcance(DB::table($this->tabla), request()->user(), $this->tabla)
-                    ->where($this->tabla . '.id', $registro)->lockForUpdate()->first();
+                    ->where($this->tabla.'.id', $registro)->lockForUpdate()->first();
                 abort_if($actual === null, 404, 'Registro no encontrado.');
                 DB::table($this->tabla)->where('id', $registro)->delete();
                 $this->despuesDeGuardar($actual, null);
@@ -135,9 +136,7 @@ abstract class CrudController extends Controller
         }
     }
 
-    protected function validarNegocio(array $datos, ?object $actual): void
-    {
-    }
+    protected function validarNegocio(array $datos, ?object $actual): void {}
 
     protected function preparar(array $datos): array
     {
@@ -149,9 +148,7 @@ abstract class CrudController extends Controller
         return $registro;
     }
 
-    protected function despuesDeGuardar(?object $anterior, ?object $nuevo): void
-    {
-    }
+    protected function despuesDeGuardar(?object $anterior, ?object $nuevo): void {}
 
     protected function buscar(int $id): object
     {
@@ -169,17 +166,17 @@ abstract class CrudController extends Controller
         $desconocidas = array_diff(array_keys($entrada), $permitidas);
         if ($desconocidas !== []) {
             throw ValidationException::withMessages([
-                'campos' => 'Campos no permitidos: ' . implode(', ', $desconocidas) . '.',
+                'campos' => 'Campos no permitidos: '.implode(', ', $desconocidas).'.',
             ]);
         }
 
         $reglas = [];
         foreach ($columnas as $columna) {
             $campo = $columna['name'];
-            if (!in_array($campo, $permitidas, true)) {
+            if (! in_array($campo, $permitidas, true)) {
                 continue;
             }
-            $base = (!$parcial && !$columna['nullable'] && $columna['default'] === null)
+            $base = (! $parcial && ! $columna['nullable'] && $columna['default'] === null)
                 ? ['required'] : ['sometimes'];
             if ($columna['nullable']) {
                 $base[] = 'nullable';
@@ -193,7 +190,7 @@ abstract class CrudController extends Controller
                 continue;
             }
             $campo = $foranea['columns'][0];
-            if (isset($datos[$campo]) && !DB::table($foranea['foreign_table'])
+            if (isset($datos[$campo]) && ! DB::table($foranea['foreign_table'])
                 ->where($foranea['foreign_columns'][0], $datos[$campo])->exists()) {
                 throw ValidationException::withMessages([$campo => 'El registro relacionado no existe.']);
             }
@@ -205,15 +202,28 @@ abstract class CrudController extends Controller
     private function reglaTipo(array $columna): array
     {
         $tipo = strtolower($columna['type_name']);
-        if (str_contains($tipo, 'bool')) return ['boolean'];
-        if (str_contains($tipo, 'int')) return ['integer'];
-        if (in_array($tipo, ['numeric', 'decimal', 'float4', 'float8'], true)) return ['numeric'];
-        if (str_contains($tipo, 'date') || str_contains($tipo, 'timestamp')) return ['date'];
-        if (str_contains($tipo, 'time')) return ['regex:/^\d{2}:\d{2}(:\d{2})?$/'];
-        if (str_contains($tipo, 'json')) return ['array'];
+        if (str_contains($tipo, 'bool')) {
+            return ['boolean'];
+        }
+        if (str_contains($tipo, 'int')) {
+            return ['integer'];
+        }
+        if (in_array($tipo, ['numeric', 'decimal', 'float4', 'float8'], true)) {
+            return ['numeric'];
+        }
+        if (str_contains($tipo, 'date') || str_contains($tipo, 'timestamp')) {
+            return ['date'];
+        }
+        if (str_contains($tipo, 'time')) {
+            return ['regex:/^\d{2}:\d{2}(:\d{2})?$/'];
+        }
+        if (str_contains($tipo, 'json')) {
+            return ['array'];
+        }
         if (in_array($tipo, ['varchar', 'bpchar', 'text', 'char'], true)) {
             preg_match('/\((\d+)\)/', $columna['type'], $partes);
-            return isset($partes[1]) ? ['string', 'max:' . $partes[1]] : ['string'];
+
+            return isset($partes[1]) ? ['string', 'max:'.$partes[1]] : ['string'];
         }
 
         return [];
@@ -222,8 +232,12 @@ abstract class CrudController extends Controller
     private function agregarFechas(array &$datos, bool $creacion): void
     {
         $columnas = array_column(Schema::getColumns($this->tabla), 'name');
-        if ($creacion && in_array('created_at', $columnas, true)) $datos['created_at'] = now();
-        if (in_array('updated_at', $columnas, true)) $datos['updated_at'] = now();
+        if ($creacion && in_array('created_at', $columnas, true)) {
+            $datos['created_at'] = now();
+        }
+        if (in_array('updated_at', $columnas, true)) {
+            $datos['updated_at'] = now();
+        }
     }
 
     private function errorIntegridad(QueryException $exception)
@@ -236,7 +250,9 @@ abstract class CrudController extends Controller
             '23514' => [422, 'Los datos no cumplen una restricción de la base.'],
             'P0001' => [422, 'La operación viola una regla de negocio de la base.'],
         ];
-        if (!isset($respuestas[$estado])) throw $exception;
+        if (! isset($respuestas[$estado])) {
+            throw $exception;
+        }
         [$codigo, $mensaje] = $respuestas[$estado];
 
         return response()->json(['message' => $mensaje], $codigo);

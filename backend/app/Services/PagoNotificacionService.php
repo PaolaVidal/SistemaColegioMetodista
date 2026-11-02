@@ -17,7 +17,7 @@ class PagoNotificacionService
                 'estudiantes.id as estudiante_id', 'estudiantes.nombres', 'estudiantes.apellidos')
             ->first();
 
-        if (!$pago) {
+        if (! $pago) {
             return;
         }
 
@@ -32,12 +32,12 @@ class PagoNotificacionService
             ->get();
 
         foreach ($destinatarios as $destinatario) {
-            $asunto = 'Pago registrado - ' . $pago->nombres . ' ' . $pago->apellidos;
-            $contenido = "Se registró un pago de $" . number_format((float) $pago->monto_pago, 2)
-                . " para {$pago->nombres} {$pago->apellidos}.\n"
-                . "Concepto: {$pago->concepto}.\n"
-                . "Comprobante: {$pago->numero_comprobante}.\n"
-                . 'Saldo pendiente: $' . number_format((float) $pago->saldo_pendiente, 2) . '.';
+            $asunto = 'Pago registrado - '.$pago->nombres.' '.$pago->apellidos;
+            $contenido = 'Se registró un pago de $'.number_format((float) $pago->monto_pago, 2)
+                ." para {$pago->nombres} {$pago->apellidos}.\n"
+                ."Concepto: {$pago->concepto}.\n"
+                ."Comprobante: {$pago->numero_comprobante}.\n"
+                .'Saldo pendiente: $'.number_format((float) $pago->saldo_pendiente, 2).'.';
 
             $notificacionId = DB::table('notificaciones')->insertGetId([
                 'id_usuario_destino' => $destinatario->id,

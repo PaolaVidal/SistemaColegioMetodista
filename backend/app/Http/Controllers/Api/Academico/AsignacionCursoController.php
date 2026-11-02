@@ -14,7 +14,7 @@ class AsignacionCursoController extends CrudController
     {
         $ciclo = $datos['id_ciclo'] ?? $actual?->id_ciclo;
         $seccion = $datos['id_seccion'] ?? $actual?->id_seccion;
-        if ($ciclo && $seccion && !DB::table('secciones')->where('id', $seccion)->where('id_ciclo', $ciclo)->exists()) {
+        if ($ciclo && $seccion && ! DB::table('secciones')->where('id', $seccion)->where('id_ciclo', $ciclo)->exists()) {
             throw ValidationException::withMessages(['id_seccion' => 'La sección no pertenece al ciclo indicado.']);
         }
     }

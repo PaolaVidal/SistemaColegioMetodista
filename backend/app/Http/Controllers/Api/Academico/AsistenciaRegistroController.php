@@ -19,7 +19,9 @@ class AsistenciaRegistroController extends CrudController
     {
         $asignacion = $datos['id_asignacion_curso'] ?? $actual?->id_asignacion_curso;
         $matricula = $datos['id_matricula'] ?? $actual?->id_matricula;
-        if (!$asignacion || !$matricula) return;
+        if (! $asignacion || ! $matricula) {
+            return;
+        }
 
         $coincide = DB::table('asignaciones_cursos')
             ->join('matriculas', function ($join) use ($matricula) {
@@ -29,7 +31,7 @@ class AsistenciaRegistroController extends CrudController
                     ->where('matriculas.estado', true);
             })
             ->where('asignaciones_cursos.id', $asignacion)->exists();
-        if (!$coincide) {
+        if (! $coincide) {
             throw ValidationException::withMessages(['id_matricula' => 'La matrícula no está activa en el grupo indicado.']);
         }
     }

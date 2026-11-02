@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Policies\Api\ResourcePolicy;
-use App\Services\RendimientoNotificacionService;
 use App\Services\ContextoAuditoriaService;
+use App\Services\RendimientoNotificacionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -24,6 +24,7 @@ class CalificacionController extends Controller
         if (in_array($politica->rol(request()->user()), ['estudiante', 'responsable'], true)) {
             $evaluaciones->transform(function ($evaluacion) {
                 unset($evaluacion->ponderacion);
+
                 return $evaluacion;
             });
         }

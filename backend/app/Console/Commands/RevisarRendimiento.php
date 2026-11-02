@@ -27,7 +27,7 @@ class RevisarRendimiento extends Command
         $pendientes = collect();
         foreach ($promedios as $clave => $fila) {
             $estado = $estados->get($clave);
-            if (!$estado || $estado->ultimo_promedio === null
+            if (! $estado || $estado->ultimo_promedio === null
                 || abs((float) $estado->ultimo_promedio - (float) $fila->promedio) >= 0.005
                 || (bool) $estado->en_riesgo !== ((float) $fila->promedio < 5)) {
                 $pendientes->push($fila);
@@ -35,7 +35,7 @@ class RevisarRendimiento extends Command
         }
 
         foreach ($estados as $clave => $estado) {
-            if (!$promedios->has($clave) && ($estado->ultimo_promedio !== null || $estado->en_riesgo)) {
+            if (! $promedios->has($clave) && ($estado->ultimo_promedio !== null || $estado->en_riesgo)) {
                 $pendientes->push($estado);
             }
         }

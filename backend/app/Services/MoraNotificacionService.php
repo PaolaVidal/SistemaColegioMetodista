@@ -19,7 +19,7 @@ class MoraNotificacionService
                     'c.saldo_pendiente', 'c.estado', 'e.nombres', 'e.apellidos']);
 
             $hoy = Carbon::today('America/El_Salvador');
-            if (!$cuenta || (float) $cuenta->saldo_pendiente <= 0
+            if (! $cuenta || (float) $cuenta->saldo_pendiente <= 0
                 || $cuenta->fecha_vencimiento >= $hoy->toDateString()) {
                 return 0;
             }
@@ -51,11 +51,11 @@ class MoraNotificacionService
                 return 0;
             }
 
-            $asunto = 'Aviso de pago vencido - ' . $cuenta->nombres . ' ' . $cuenta->apellidos;
+            $asunto = 'Aviso de pago vencido - '.$cuenta->nombres.' '.$cuenta->apellidos;
             $contenido = "La cuenta de {$cuenta->nombres} {$cuenta->apellidos} por {$cuenta->concepto} "
-                . "venció el {$cuenta->fecha_vencimiento}.\n"
-                . 'Saldo pendiente: $' . number_format((float) $cuenta->saldo_pendiente, 2) . ".\n"
-                . 'Por favor, consulte el estado de cuenta con Secretaría.';
+                ."venció el {$cuenta->fecha_vencimiento}.\n"
+                .'Saldo pendiente: $'.number_format((float) $cuenta->saldo_pendiente, 2).".\n"
+                .'Por favor, consulte el estado de cuenta con Secretaría.';
 
             foreach ($destinatarios as $destinatario) {
                 $notificacionId = DB::table('notificaciones')->insertGetId([

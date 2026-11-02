@@ -22,9 +22,9 @@ Route::middleware(['auth:sanctum', EnsureActiveUser::class])->group(function () 
     Route::get('auth/me', [AuthController::class, 'me']);
     Route::post('auth/logout', [AuthController::class, 'logout']);
 
-    require __DIR__ . '/api/catalogos.php';
-    require __DIR__ . '/api/personas.php';
-    require __DIR__ . '/api/academico.php';
-    require __DIR__ . '/api/finanzas.php';
-    require __DIR__ . '/api/comunicacion.php';
+    require __DIR__.'/api/catalogos.php';
+    require __DIR__.'/api/personas.php';
+    require __DIR__.'/api/academico.php';
+    require __DIR__.'/api/finanzas.php';
+    require __DIR__.'/api/comunicacion.php';
 });

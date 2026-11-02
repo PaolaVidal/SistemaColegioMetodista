@@ -17,7 +17,7 @@ class ExpedienteEstudianteController extends Controller
             ->orderBy('apellidos')->orderBy('nombres');
 
         if ($request->filled('buscar')) {
-            $termino = '%' . $request->string('buscar')->trim() . '%';
+            $termino = '%'.$request->string('buscar')->trim().'%';
             $consulta->where(function ($query) use ($termino) {
                 $query->where('nombres', 'ilike', $termino)
                     ->orWhere('apellidos', 'ilike', $termino)
@@ -35,7 +35,9 @@ class ExpedienteEstudianteController extends Controller
     public function store(Request $request)
     {
         app(ResourcePolicy::class)->autorizar($request->user(), 'estudiantes', 'C');
-        if ($request->exists('ficha')) app(ResourcePolicy::class)->autorizar($request->user(), 'ficha_estudiante', 'C');
+        if ($request->exists('ficha')) {
+            app(ResourcePolicy::class)->autorizar($request->user(), 'ficha_estudiante', 'C');
+        }
         if ($request->exists('responsables')) {
             app(ResourcePolicy::class)->autorizar($request->user(), 'responsables', 'C');
             app(ResourcePolicy::class)->autorizar($request->user(), 'estudiante_responsable', 'C');
@@ -59,6 +61,7 @@ class ExpedienteEstudianteController extends Controller
     {
         $politica = app(ResourcePolicy::class);
         abort_unless($politica->visible(request()->user(), 'estudiantes', $estudiante), 404);
+
         return response()->json($this->obtenerExpediente($estudiante));
     }
 
@@ -67,7 +70,9 @@ class ExpedienteEstudianteController extends Controller
         $politica = app(ResourcePolicy::class);
         $politica->autorizar($request->user(), 'estudiantes', 'U');
         abort_unless($politica->visible($request->user(), 'estudiantes', $estudiante), 404);
-        if ($request->exists('ficha')) $politica->autorizar($request->user(), 'ficha_estudiante', 'U');
+        if ($request->exists('ficha')) {
+            $politica->autorizar($request->user(), 'ficha_estudiante', 'U');
+        }
         if ($request->exists('responsables')) {
             $politica->autorizar($request->user(), 'responsables', 'U');
             $politica->autorizar($request->user(), 'estudiante_responsable', 'U');
@@ -123,7 +128,7 @@ class ExpedienteEstudianteController extends Controller
             );
         }
 
-        if (!array_key_exists('responsables', $data)) {
+        if (! array_key_exists('responsables', $data)) {
             return;
         }
 

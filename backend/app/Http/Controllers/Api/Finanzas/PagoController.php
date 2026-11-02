@@ -31,12 +31,18 @@ class PagoController extends CrudController
     {
         $cuentaId = $datos['id_cuenta_cobrar'] ?? $actual?->id_cuenta_cobrar;
         $monto = $datos['monto_pago'] ?? $actual?->monto_pago;
-        if (!$cuentaId || !$monto) return;
+        if (! $cuentaId || ! $monto) {
+            return;
+        }
 
         $cuenta = DB::table('cuentas_por_cobrar')->where('id', $cuentaId)->lockForUpdate()->first();
-        if (!$cuenta) return;
+        if (! $cuenta) {
+            return;
+        }
         $otrosPagos = DB::table('pagos')->where('id_cuenta_cobrar', $cuentaId);
-        if ($actual) $otrosPagos->where('id', '<>', $actual->id);
+        if ($actual) {
+            $otrosPagos->where('id', '<>', $actual->id);
+        }
         $disponible = round((float) $cuenta->monto_original + (float) $cuenta->monto_mora - (float) $otrosPagos->sum('monto_pago'), 2);
         if ((float) $monto > $disponible) {
             throw ValidationException::withMessages(['monto_pago' => 'El pago supera el saldo disponible.']);
@@ -47,7 +53,9 @@ class PagoController extends CrudController
     {
         foreach (array_unique(array_filter([$anterior?->id_cuenta_cobrar, $nuevo?->id_cuenta_cobrar])) as $cuentaId) {
             $cuenta = DB::table('cuentas_por_cobrar')->where('id', $cuentaId)->lockForUpdate()->first();
-            if (!$cuenta) continue;
+            if (! $cuenta) {
+                continue;
+            }
             $abonado = (float) DB::table('pagos')->where('id_cuenta_cobrar', $cuentaId)->sum('monto_pago');
             $saldo = max(0, round((float) $cuenta->monto_original + (float) $cuenta->monto_mora - $abonado, 2));
             $estado = $saldo <= 0 ? 'pagado' : ($cuenta->fecha_vencimiento < now()->toDateString() ? 'vencido' : 'pendiente');

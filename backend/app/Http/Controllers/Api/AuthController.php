@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Usuario;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\PersonalAccessToken;
 
@@ -30,7 +30,7 @@ class AuthController extends Controller
 
     public function sesion(Request $request)
     {
-        if (!$request->hasSession() || !$request->attributes->get('sanctum')) {
+        if (! $request->hasSession() || ! $request->attributes->get('sanctum')) {
             throw ValidationException::withMessages(['sesion' => 'Inicie la sesión desde el frontend autorizado, con cookies y protección CSRF.']);
         }
 

@@ -17,6 +17,7 @@ class EnviarNotificacionCorreo implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries = 3;
+
     public int $timeout = 20;
 
     public function __construct(public int $notificacionId, public string $correo, public string $tipo)
@@ -38,7 +39,7 @@ class EnviarNotificacionCorreo implements ShouldQueue
             default => null,
         };
 
-        if (!$url) {
+        if (! $url) {
             throw new \RuntimeException("No hay webhook configurado para {$this->tipo}.");
         }
 

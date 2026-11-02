@@ -28,7 +28,7 @@ class AuditoriaCalificacionesTest extends SeguridadTestCase
         }
         $this->assertEquals(8, json_decode($filas[1]->valor_anterior)->nota);
         $this->assertEquals(9, json_decode($filas[1]->valor_nuevo)->nota);
-        $this->getJson('/api/auditoria/' . $filas[1]->id)->assertOk()->assertJsonPath('valor_nuevo.nota', 9);
+        $this->getJson('/api/auditoria/'.$filas[1]->id)->assertOk()->assertJsonPath('valor_nuevo.nota', 9);
     }
 
     public function test_batch_grades_are_audited_and_failed_transactions_leave_no_history(): void
@@ -36,7 +36,7 @@ class AuditoriaCalificacionesTest extends SeguridadTestCase
         $grupo = $this->grupo();
         $admin = $this->usuario();
         Sanctum::actingAs($admin);
-        $url = '/api/evaluaciones/' . $grupo['evaluacion'] . '/calificaciones';
+        $url = '/api/evaluaciones/'.$grupo['evaluacion'].'/calificaciones';
         $this->putJson($url, ['calificaciones' => [['id_matricula' => $grupo['matricula'], 'nota' => 8]]])->assertOk();
         $this->putJson($url, ['calificaciones' => [['id_matricula' => $grupo['matricula'], 'nota' => 9]]])->assertOk();
         $this->assertSame(2, DB::table('auditoria')->where('id_usuario', $admin->id)->count());
@@ -73,15 +73,15 @@ class AuditoriaCalificacionesTest extends SeguridadTestCase
         ] as $sql) {
             try {
                 DB::transaction(fn () => DB::statement($sql));
-                $this->fail('La base aceptó una operación prohibida: ' . $sql);
+                $this->fail('La base aceptó una operación prohibida: '.$sql);
             } catch (QueryException $e) {
                 $this->assertSame('42501', $e->errorInfo[0]);
             }
         }
         Sanctum::actingAs($this->usuario());
         $this->postJson('/api/auditoria', [])->assertStatus(405);
-        $this->patchJson('/api/auditoria/' . $fila->id, [])->assertStatus(405);
-        $this->deleteJson('/api/auditoria/' . $fila->id)->assertStatus(405);
+        $this->patchJson('/api/auditoria/'.$fila->id, [])->assertStatus(405);
+        $this->deleteJson('/api/auditoria/'.$fila->id)->assertStatus(405);
     }
 
     public function test_role_middleware_and_row_scope_prevent_unauthorized_grade_changes(): void
@@ -93,11 +93,11 @@ class AuditoriaCalificacionesTest extends SeguridadTestCase
         $this->getJson('/api/usuarios')->assertForbidden();
         $this->getJson('/api/auditoria')->assertForbidden();
         $this->getJson('/api/calificaciones')->assertOk()->assertJsonPath('total', 0);
-        $this->patchJson('/api/calificaciones/' . $id, ['nota' => 10])->assertNotFound();
+        $this->patchJson('/api/calificaciones/'.$id, ['nota' => 10])->assertNotFound();
         $this->postJson('/api/calificaciones', ['id_evaluacion' => $ajeno['evaluacion'], 'id_matricula' => $ajeno['matricula'], 'nota' => 10])->assertForbidden();
         Sanctum::actingAs($this->usuario('Secretaría'));
         $this->getJson('/api/calificaciones')->assertOk();
-        $this->patchJson('/api/calificaciones/' . $id, ['nota' => 10])->assertForbidden();
+        $this->patchJson('/api/calificaciones/'.$id, ['nota' => 10])->assertForbidden();
         Sanctum::actingAs($grupo['estudiante']);
         $this->getJson('/api/calificaciones')->assertOk()->assertJsonPath('total', 0);
         $this->postJson('/api/calificaciones', [])->assertForbidden();

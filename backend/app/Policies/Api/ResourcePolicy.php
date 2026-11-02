@@ -57,6 +57,7 @@ class ResourcePolicy
         $rol = $this->rol($usuario);
         if ($tabla === 'auditoria') {
             abort_unless($rol === 'administrador' && $accion === 'R', 403, 'La auditoría es de solo lectura para el administrador.');
+
             return;
         }
         $permitido = match ($rol) {
@@ -78,7 +79,7 @@ class ResourcePolicy
 
     public function visible(Usuario $usuario, string $tabla, int $id): bool
     {
-        return $this->consulta($usuario, $tabla)->where($tabla . '.id', $id)->exists();
+        return $this->consulta($usuario, $tabla)->where($tabla.'.id', $id)->exists();
     }
 
     public function asignacionVisible(Usuario $usuario, int $id): bool
@@ -106,7 +107,9 @@ class ResourcePolicy
     public function aplicarAlcance(Builder $consulta, Usuario $usuario, string $tabla): Builder
     {
         $rol = $this->rol($usuario);
-        if ($rol === 'administrador' || $rol === 'secretaria') return $consulta;
+        if ($rol === 'administrador' || $rol === 'secretaria') {
+            return $consulta;
+        }
 
         if ($rol === 'docente') {
             $docentes = fn () => DB::table('docente')->select('id')->where('id_usuario', $usuario->id);
@@ -133,7 +136,7 @@ class ResourcePolicy
                 'ficha_estudiante' => $consulta->whereIn('ficha_estudiante.id_estudiante', $estudiantes()),
                 'calificaciones' => $consulta->whereIn('calificaciones.id_evaluacion', $evaluaciones())->whereIn('calificaciones.id_matricula', $matriculas()),
                 'evaluaciones' => $consulta->whereIn('evaluaciones.id_asignacion_curso', $asignaciones()),
-                'asistencias', 'tareas', 'horarios' => $consulta->whereIn($tabla . '.id_asignacion_curso', $asignaciones()),
+                'asistencias', 'tareas', 'horarios' => $consulta->whereIn($tabla.'.id_asignacion_curso', $asignaciones()),
                 'notificaciones' => $consulta->where('notificaciones.id_usuario_destino', $usuario->id),
                 'demeritos', 'anuncios' => $consulta,
                 default => $consulta->whereRaw('1 = 0'),
@@ -156,10 +159,10 @@ class ResourcePolicy
         return match ($tabla) {
             'estudiantes' => $consulta->whereIn('estudiantes.id', $estudiantes()),
             'matriculas' => $consulta->whereIn('matriculas.id', $matriculas()),
-            'calificaciones', 'asistencias' => $consulta->whereIn($tabla . '.id_matricula', $matriculas()),
-            'ficha_estudiante', 'documentos_estudiantes', 'demeritos', 'cuentas_por_cobrar' => $consulta->whereIn($tabla . '.id_estudiante', $estudiantes()),
+            'calificaciones', 'asistencias' => $consulta->whereIn($tabla.'.id_matricula', $matriculas()),
+            'ficha_estudiante', 'documentos_estudiantes', 'demeritos', 'cuentas_por_cobrar' => $consulta->whereIn($tabla.'.id_estudiante', $estudiantes()),
             'pagos' => $consulta->whereIn('pagos.id_cuenta_cobrar', $cuentas()),
-            'tareas', 'horarios', 'evaluaciones' => $consulta->whereIn($tabla . '.id_asignacion_curso', $asignaciones()),
+            'tareas', 'horarios', 'evaluaciones' => $consulta->whereIn($tabla.'.id_asignacion_curso', $asignaciones()),
             'responsables' => $rol === 'responsable'
                 ? $consulta->where('responsables.id_usuario', $usuario->id)
                 : $consulta->whereIn('responsables.id', DB::table('estudiante_responsable')->select('id_responsable')->whereIn('id_estudiante', $estudiantes())),
@@ -171,14 +174,18 @@ class ResourcePolicy
 
     public function autorizarDestino(Usuario $usuario, string $tabla, array $datos): void
     {
-        if ($this->rol($usuario) !== 'docente') return;
+        if ($this->rol($usuario) !== 'docente') {
+            return;
+        }
         $relacion = match ($tabla) {
             'evaluaciones', 'asistencias', 'tareas' => 'id_asignacion_curso',
             'calificaciones' => 'id_evaluacion',
             'documentos_docentes' => 'id_docente',
             default => null,
         };
-        if ($relacion === null) return;
+        if ($relacion === null) {
+            return;
+        }
         $destino = $datos[$relacion] ?? null;
         abort_if($destino === null, 403, 'El registro requiere una relación autorizada.');
         $tablaDestino = match ($relacion) {

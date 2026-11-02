@@ -12,7 +12,7 @@ class NotificacionCorreoService
     public function enviar(int $notificacionId, string $correo, string $url): void
     {
         $notificacion = DB::table('notificaciones')->where('id', $notificacionId)->first();
-        if (!$notificacion || $notificacion->estado_envio === 'enviado') {
+        if (! $notificacion || $notificacion->estado_envio === 'enviado') {
             return;
         }
 

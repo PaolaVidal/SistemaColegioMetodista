@@ -12,8 +12,8 @@ class EnsureActiveUser
     public function handle(Request $request, Closure $next)
     {
         $usuario = $request->user();
-        $sesion = $request->hasSession() && !($usuario?->currentAccessToken() instanceof PersonalAccessToken);
-        if (!$usuario?->activo || ($sesion && (int) $request->session()->get('version_sesion', -1) !== (int) $usuario->version_sesion)) {
+        $sesion = $request->hasSession() && ! ($usuario?->currentAccessToken() instanceof PersonalAccessToken);
+        if (! $usuario?->activo || ($sesion && (int) $request->session()->get('version_sesion', -1) !== (int) $usuario->version_sesion)) {
             if ($sesion) {
                 Auth::guard('web')->logout();
                 $request->session()->invalidate();

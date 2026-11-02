@@ -51,7 +51,7 @@ class RendimientoNotificacionService
             'updated_at' => now(),
         ]);
 
-        if ($enRiesgo && !$antesEnRiesgo) {
+        if ($enRiesgo && ! $antesEnRiesgo) {
             $this->registrarAvisos($matriculaId, $asignacionId, $periodo, (float) $promedio);
         }
     }
@@ -69,7 +69,7 @@ class RendimientoNotificacionService
             ->where('m.id', $matriculaId)
             ->first(['e.id as estudiante_id', 'e.id_usuario', 'e.nombres', 'e.apellidos', 's.nombre as asignatura']);
 
-        if (!$datos) {
+        if (! $datos) {
             return;
         }
 
@@ -92,9 +92,9 @@ class RendimientoNotificacionService
 
         $asunto = "Alerta de rendimiento - {$datos->asignatura}";
         $contenido = "El promedio de {$datos->nombres} {$datos->apellidos} en "
-            . "{$datos->asignatura}, período {$periodo}, bajó a "
-            . number_format($promedio, 2) . "/10. "
-            . 'Por favor, consulte las calificaciones y dé seguimiento con el docente.';
+            ."{$datos->asignatura}, período {$periodo}, bajó a "
+            .number_format($promedio, 2).'/10. '
+            .'Por favor, consulte las calificaciones y dé seguimiento con el docente.';
 
         foreach ($destinatarios->unique('id') as $destinatario) {
             $notificacionId = DB::table('notificaciones')->insertGetId([
