@@ -39,19 +39,87 @@ services:
       APP_ENV: local
       APP_DEBUG: "true"
       APP_URL: http://localhost:8000
-      APP_KEY: base64:8pQk0R6jG5mC2vN9xL4sT7uW1yZ3aB6cD8eF0hJ2kM=
       DB_CONNECTION: pgsql
       DB_HOST: postgres
       DB_PORT: 5432
       DB_DATABASE: ColegioMetodistaDB
       DB_USERNAME: cma_user
       DB_PASSWORD: password123
+      N8N_PAYMENT_WEBHOOK_URL: http://n8n:5678/webhook/pago-registrado
+      N8N_ACADEMIC_WEBHOOK_URL: http://n8n:5678/webhook/bajo-rendimiento
+      N8N_OVERDUE_WEBHOOK_URL: http://n8n:5678/webhook/aviso-mora
       CACHE_DRIVER: file
-      QUEUE_CONNECTION: sync
+      QUEUE_CONNECTION: database
       SESSION_DRIVER: file
-    command: >
-      sh -c "chmod -R ug+rwX bootstrap/cache &&
-      php artisan serve --host=0.0.0.0 --port=8000"
+    command: php artisan serve --no-reload --host=0.0.0.0 --port=8000
+    networks:
+      - cma_network
+
+  scheduler:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cma_scheduler
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      n8n:
+        condition: service_started
+    working_dir: /var/www/html
+    volumes:
+      - ./backend:/var/www/html
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ColegioMetodistaDB
+      DB_USERNAME: cma_user
+      DB_PASSWORD: password123
+      N8N_PAYMENT_WEBHOOK_URL: http://n8n:5678/webhook/pago-registrado
+      N8N_ACADEMIC_WEBHOOK_URL: http://n8n:5678/webhook/bajo-rendimiento
+      N8N_OVERDUE_WEBHOOK_URL: http://n8n:5678/webhook/aviso-mora
+      CACHE_DRIVER: file
+      QUEUE_CONNECTION: database
+      SESSION_DRIVER: file
+    command: php artisan schedule:work
+    networks:
+      - cma_network
+
+  worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: cma_worker
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      n8n:
+        condition: service_started
+    working_dir: /var/www/html
+    volumes:
+      - ./backend:/var/www/html
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      DB_CONNECTION: pgsql
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_DATABASE: ColegioMetodistaDB
+      DB_USERNAME: cma_user
+      DB_PASSWORD: password123
+      N8N_PAYMENT_WEBHOOK_URL: http://n8n:5678/webhook/pago-registrado
+      N8N_ACADEMIC_WEBHOOK_URL: http://n8n:5678/webhook/bajo-rendimiento
+      N8N_OVERDUE_WEBHOOK_URL: http://n8n:5678/webhook/aviso-mora
+      CACHE_DRIVER: file
+      QUEUE_CONNECTION: database
+      SESSION_DRIVER: file
+    command: php artisan queue:work database --queue=correos --sleep=2 --tries=3 --timeout=20 --max-time=3600
     networks:
       - cma_network
 
@@ -91,21 +159,38 @@ services:
     container_name: cma_n8n
     restart: unless-stopped
     ports:
-      - "5678:5678"
+      - "127.0.0.1:5678:5678"
     environment:
-      N8N_HOST: http://localhost:5678
+      N8N_HOST: localhost
+      N8N_PROTOCOL: http
       N8N_PORT: 5678
-      WEBHOOK_URL: http://localhost:5678/
-      GENERIC_TIMEZONE: America/Mexico_City
-      TZ: America/Mexico_City
+      N8N_WEBHOOK_URL: http://localhost:5678/
+      GENERIC_TIMEZONE: America/El_Salvador
+      TZ: America/El_Salvador
+      N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS: "true"
     volumes:
       - n8n_data:/home/node/.n8n
+      - ./n8n:/workflows:ro
+    networks:
+      - cma_network
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: cma_mailpit
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"
+    environment:
+      MP_DATABASE: /data/mailpit.db
+    volumes:
+      - mailpit_data:/data
     networks:
       - cma_network
 
 volumes:
   postgres_data:
   n8n_data:
+  mailpit_data:
   pgadmin_data:
 
 networks:

@@ -12,7 +12,10 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+        $schedule->command('rendimiento:revisar')->everyMinute()->withoutOverlapping();
+        $schedule->command('mora:revisar')->dailyAt('08:00')
+            ->timezone('America/El_Salvador')->withoutOverlapping();
+        $schedule->command('sanctum:prune-expired --hours=24')->daily()->withoutOverlapping();
     }
 
     /**

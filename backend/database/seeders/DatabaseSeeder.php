@@ -14,14 +14,16 @@ class DatabaseSeeder extends Seeder
 
         DB::transaction(function () use ($faker): void {
             $roles = [];
-            foreach (['Administrador', 'Docente', 'Encargado', 'Estudiante'] as $name) {
-                $roles[$name] = DB::table('roles')->insertGetId(['nombre' => $name]);
+            foreach (['Administrador', 'Docente', 'Secretaría', 'Encargado', 'Estudiante'] as $name) {
+                $roles[$name] = DB::table('roles')->where('nombre', $name)->value('id')
+                    ?? DB::table('roles')->insertGetId(['nombre' => $name]);
             }
 
             $adminUsers = [];
             foreach (range(1, 4) as $index) {
                 $adminUsers[] = $this->createUser($roles['Administrador'], "admin{$index}", "admin{$index}@colegiometodista.test");
             }
+            DB::select("SELECT set_config('app.usuario_id', ?, true), set_config('app.origen', 'seeder', true)", [(string) $adminUsers[0]]);
 
             $cycles = [];
             foreach ([2025, 2026] as $year) {
@@ -402,15 +404,6 @@ class DatabaseSeeder extends Seeder
                     'estado_envio' => 'enviado',
                     'created_at' => now(),
                 ]);
-                DB::table('auditoria')->insert([
-                    'id_usuario' => $userId,
-                    'id_registro' => $userId,
-                    'accion' => 'Crear',
-                    'nombre_tabla' => 'usuarios',
-                    'valor_anterior' => null,
-                    'valor_nuevo' => json_encode(['id' => $userId]),
-                    'fecha_creacion' => now(),
-                ]);
             }
         });
     }
@@ -421,7 +414,7 @@ class DatabaseSeeder extends Seeder
             'id_rol' => $roleId,
             'nombre_usuario' => $username,
             'correo' => $email,
-            'contrasena' => Hash::make('password'),
+            'contrasena' => Hash::make('password123'),
             'activo' => true,
             'created_at' => now(),
             'updated_at' => now(),
