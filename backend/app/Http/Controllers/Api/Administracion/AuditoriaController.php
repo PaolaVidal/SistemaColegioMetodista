@@ -3,17 +3,18 @@
 namespace App\Http\Controllers\Api\Administracion;
 
 use App\Http\Controllers\Api\Support\CrudController;
+use Illuminate\Http\Request;
 
 class AuditoriaController extends CrudController
 {
     protected string $tabla = 'auditoria';
 
-    public function store(\Illuminate\Http\Request $request)
+    public function store(Request $request)
     {
         abort(405, 'La auditoría se registra automáticamente.');
     }
 
-    public function update(\Illuminate\Http\Request $request, int $registro)
+    public function update(Request $request, int $registro)
     {
         abort(405, 'La auditoría es inmutable.');
     }
