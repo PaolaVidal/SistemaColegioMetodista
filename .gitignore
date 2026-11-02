@@ -2,6 +2,8 @@
 node_modules/
 frontend/node_modules/
 frontend/dist/
+frontend/playwright-report/
+frontend/test-results/
 
 # Laravel / PHP
 backend/vendor/
@@ -24,6 +26,7 @@ npm-debug.log*
 
 # Composer
 composer.lock
+!backend/composer.lock
 
 # Build
 dist/

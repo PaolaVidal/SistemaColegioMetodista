@@ -64,7 +64,7 @@ Docker Compose:
 
   Notas:
 - La API dispone de rutas CRUD, expedientes compuestos y registro por lote de notas y asistencias. El frontend todavía es una interfaz inicial.
-- Requisitos locales: Node.js (>=20.19 recomendado), npm, PHP 8.1, Composer y Docker Desktop o Docker Engine activos.
+- Requisitos locales: Node.js (>=20.19 recomendado), npm, PHP 8.2, Composer y Docker Desktop o Docker Engine activos.
 
 Notificaciones locales de pagos:
 - Al registrar un pago con `POST /api/pagos`, Laravel crea una notificación para cada responsable activo vinculado al estudiante y programa su envío en la cola después de confirmar la transacción.
@@ -91,3 +91,10 @@ Avisos de mora y cola de notificaciones:
 - Una cuenta creada o modificada desde la API con vencimiento anterior al día actual se revisa al guardarla. Las modificaciones directas en PostgreSQL se detectan en la revisión diaria. Para revisar de inmediato: `docker compose exec backend php artisan mora:revisar`.
 - El flujo está en `n8n/mora.json`; para una instalación nueva, importarlo con `docker compose exec n8n n8n import:workflow --input=/workflows/mora.json`, publicarlo con `docker compose exec n8n n8n publish:workflow --id=colegiometodista-mora` y reiniciar n8n.
 - `QUEUE_CONNECTION=database` almacena los trabajos en PostgreSQL. El servicio Docker `worker` procesa la cola `correos` con hasta tres intentos; `jobs` y `failed_jobs` permiten consultar el estado. Ver [documentación de notificaciones y colas](documentacion/Notificaciones-n8n-colas.md).
+
+CI/CD y pruebas:
+- Cada pull request hacia `main` ejecuta lint y build del frontend, PHPUnit, Pint, auditoría de Composer y validación de Docker Compose.
+- El workflow de integración usa PostgreSQL 16 y ejecuta las migraciones antes de los tests del backend.
+- Los tags con formato `vX.Y.Z` construyen y publican las imágenes backend/frontend en GHCR y las escanean con Trivy.
+- El despliegue productivo permanece desactivado hasta definir el proveedor, el environment protegido y la estrategia de rollback.
+- Validación local del pipeline: `docker compose config`, `docker compose -f docker-compose.ci.yml config`, `cd frontend; npm ci; npm run lint; npm run build` y `cd backend; php artisan test; vendor/bin/pint --test`.

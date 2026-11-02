@@ -32,6 +32,7 @@ services:
     working_dir: /var/www/html
     volumes:
       - ./backend:/var/www/html
+      - /var/www/html/bootstrap/cache
     ports:
       - "8000:8000"
     environment:
