@@ -2,11 +2,11 @@ services:
   postgres:
     image: postgres:16-alpine
     environment:
-      POSTGRES_DB: colegio_testing
+      POSTGRES_DB: ColegioMetodistaSeguridadTest
       POSTGRES_USER: cma_user
       POSTGRES_PASSWORD: cma_password
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U cma_user -d colegio_testing"]
+      test: ["CMD-SHELL", "pg_isready -U cma_user -d ColegioMetodistaSeguridadTest"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -27,7 +27,7 @@ services:
       DB_CONNECTION: pgsql
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_DATABASE: colegio_testing
+      DB_DATABASE: ColegioMetodistaSeguridadTest
       DB_USERNAME: cma_user
       DB_PASSWORD: cma_password
       CACHE_DRIVER: array

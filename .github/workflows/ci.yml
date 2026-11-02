@@ -53,13 +53,13 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_DB: colegio_testing
+          POSTGRES_DB: ColegioMetodistaSeguridadTest
           POSTGRES_USER: cma_user
           POSTGRES_PASSWORD: cma_password
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U cma_user -d colegio_testing"
+          --health-cmd="pg_isready -U cma_user -d ColegioMetodistaSeguridadTest"
           --health-interval=5s
           --health-timeout=5s
           --health-retries=10
@@ -72,7 +72,7 @@ jobs:
       DB_CONNECTION: pgsql
       DB_HOST: 127.0.0.1
       DB_PORT: 5432
-      DB_DATABASE: colegio_testing
+      DB_DATABASE: ColegioMetodistaSeguridadTest
       DB_USERNAME: cma_user
       DB_PASSWORD: cma_password
       CACHE_DRIVER: array
@@ -92,7 +92,7 @@ jobs:
           tools: composer:v2
 
       - name: Prepare Laravel directories
-        run: mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views
+        run: mkdir -p bootstrap/cache storage/framework/cache storage/framework/sessions storage/framework/views && touch .env
 
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
