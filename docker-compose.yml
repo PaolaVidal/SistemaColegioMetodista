@@ -32,6 +32,8 @@ services:
     working_dir: /var/www/html
     volumes:
       - ./backend:/var/www/html
+      # vendor vive en un volumen nativo de Docker: el montaje de Windows/OneDrive es lento y corrompe vendor
+      - backend_vendor:/var/www/html/vendor
       - /var/www/html/bootstrap/cache
     ports:
       - "8000:8000"
@@ -51,6 +53,7 @@ services:
       CACHE_DRIVER: file
       QUEUE_CONNECTION: database
       SESSION_DRIVER: file
+      PHP_CLI_SERVER_WORKERS: 4
     command: php artisan serve --no-reload --host=0.0.0.0 --port=8000
     networks:
       - cma_network
@@ -69,6 +72,7 @@ services:
     working_dir: /var/www/html
     volumes:
       - ./backend:/var/www/html
+      - backend_vendor:/var/www/html/vendor
     environment:
       APP_ENV: local
       APP_DEBUG: "true"
@@ -103,6 +107,7 @@ services:
     working_dir: /var/www/html
     volumes:
       - ./backend:/var/www/html
+      - backend_vendor:/var/www/html/vendor
     environment:
       APP_ENV: local
       APP_DEBUG: "true"
@@ -143,12 +148,16 @@ services:
   frontend:
     image: node:20-alpine
     container_name: cma_frontend
+    restart: unless-stopped
     working_dir: /app
     volumes:
       - ./frontend:/app
       - /app/node_modules
     ports:
       - "5173:5173"
+    environment:
+      VITE_PROXY_TARGET: http://backend:8000
+      VITE_USE_POLLING: "true"
     command: >
       sh -c "npm install && npm run dev -- --host 0.0.0.0"
     networks:
@@ -188,6 +197,7 @@ services:
       - cma_network
 
 volumes:
+  backend_vendor:
   postgres_data:
   n8n_data:
   mailpit_data:

@@ -13,7 +13,7 @@ return new class extends Migration
             $table->unsignedInteger('version_sesion')->default(1);
         });
         DB::unprepared(<<<'SQL'
-            CREATE FUNCTION proteger_accesos_usuario() RETURNS trigger LANGUAGE plpgsql AS $$
+            CREATE OR REPLACE FUNCTION proteger_accesos_usuario() RETURNS trigger LANGUAGE plpgsql AS $$
             BEGIN
                 IF NEW.contrasena IS DISTINCT FROM OLD.contrasena
                    OR NEW.activo IS DISTINCT FROM OLD.activo

@@ -15,7 +15,8 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-configure pgsql -with-pgsql=/usr/local/include/postgresql \
     && docker-php-ext-install pdo_pgsql pgsql bcmath intl zip opcache \
     && curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && echo "opcache.enable_cli=1" > /usr/local/etc/php/conf.d/opcache-cli.ini
 
 COPY . /var/www/html
 

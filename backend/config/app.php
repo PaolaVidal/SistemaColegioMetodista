@@ -78,6 +78,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | API Rate Limit
+    |--------------------------------------------------------------------------
+    |
+    | Solicitudes por minuto permitidas a cada usuario autenticado. Las
+    | pantallas del panel consultan varios recursos paginados al cargar.
+    |
+    */
+
+    'api_rate_limit' => max(1, (int) env('API_RATE_LIMIT', 300)),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

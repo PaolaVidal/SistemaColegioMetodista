@@ -16,7 +16,7 @@ return new class extends Migration
         });
 
         DB::unprepared(<<<'SQL'
-            CREATE FUNCTION registrar_auditoria_calificaciones() RETURNS trigger LANGUAGE plpgsql AS $$
+            CREATE OR REPLACE FUNCTION registrar_auditoria_calificaciones() RETURNS trigger LANGUAGE plpgsql AS $$
             DECLARE
                 actor bigint := NULLIF(current_setting('app.usuario_id', true), '')::bigint;
                 fuente text := COALESCE(NULLIF(current_setting('app.origen', true), ''), 'sql');
@@ -47,7 +47,7 @@ return new class extends Migration
             AFTER INSERT OR UPDATE OR DELETE ON calificaciones
             FOR EACH ROW EXECUTE FUNCTION registrar_auditoria_calificaciones();
 
-            CREATE FUNCTION impedir_cambios_bitacora() RETURNS trigger LANGUAGE plpgsql AS $$
+            CREATE OR REPLACE FUNCTION impedir_cambios_bitacora() RETURNS trigger LANGUAGE plpgsql AS $$
             BEGIN
                 RAISE EXCEPTION 'La bitácora es inmutable: no se permite actualizar, eliminar ni truncar registros.' USING ERRCODE = '42501';
             END;
@@ -56,7 +56,7 @@ return new class extends Migration
             BEFORE UPDATE OR DELETE OR TRUNCATE ON auditoria
             FOR EACH STATEMENT EXECUTE FUNCTION impedir_cambios_bitacora();
 
-            CREATE FUNCTION validar_escritura_bitacora() RETURNS trigger LANGUAGE plpgsql AS $$
+            CREATE OR REPLACE FUNCTION validar_escritura_bitacora() RETURNS trigger LANGUAGE plpgsql AS $$
             BEGIN
                 IF pg_trigger_depth() < 2 THEN
                     RAISE EXCEPTION 'La bitácora solo admite registros automáticos del sistema.' USING ERRCODE = '42501';
@@ -68,7 +68,7 @@ return new class extends Migration
             BEFORE INSERT ON auditoria
             FOR EACH ROW EXECUTE FUNCTION validar_escritura_bitacora();
 
-            CREATE FUNCTION impedir_truncado_calificaciones() RETURNS trigger LANGUAGE plpgsql AS $$
+            CREATE OR REPLACE FUNCTION impedir_truncado_calificaciones() RETURNS trigger LANGUAGE plpgsql AS $$
             BEGIN
                 RAISE EXCEPTION 'Use DELETE para conservar la auditoría de cada calificación.' USING ERRCODE = '42501';
             END;
