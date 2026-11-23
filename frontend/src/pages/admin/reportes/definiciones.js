@@ -28,6 +28,23 @@ const filtroCiclo = {
 const filtroGrado = { id: 'grado', etiqueta: 'Grado', opciones: opcionesGrado };
 const filtroSeccion = { id: 'seccion', etiqueta: 'Sección', opciones: opcionesSeccion };
 const filtroPeriodo = { id: 'periodo', etiqueta: 'Período', opciones: opcionesPeriodo };
+const TODA_LA_SECCION = 'todos';
+
+// Estudiantes matriculados en el ciclo, grado y sección elegidos.
+const filtroEstudianteBoleta = {
+  id: 'estudiante',
+  etiqueta: 'Estudiante',
+  vacio: 'Resumen de la sección (tabla)',
+  dependeDe: ['ciclo', 'grado', 'seccion'],
+  opciones: (c, f = {}) => [
+    [TODA_LA_SECCION, 'Boletas individuales de toda la sección'],
+    ...c.matriculas
+      .filter((m) => (!f.ciclo || String(m.idCiclo) === f.ciclo) && (!f.grado || String(m.idGrado) === f.grado)
+        && (!f.seccion || m.seccion === f.seccion))
+      .sort((a, b) => nombreCompleto(a.estudiante).localeCompare(nombreCompleto(b.estudiante)))
+      .map((m) => [String(m.estudiante.id), `${nombreCompleto(m.estudiante)} (${m.estudiante.codigo_nie})`]),
+  ],
+};
 
 function contarPor(lista, clave) {
   return Object.entries(lista.reduce((acc, x) => ({ ...acc, [clave(x)]: (acc[clave(x)] || 0) + 1 }), {}))
@@ -143,10 +160,56 @@ async function reporteRendimiento(f) {
   };
 }
 
+// Las boletas muestran un decimal; se redondea antes de promediar y calificar el desempeño
+// para que lo impreso sea coherente (6.93 se imprime 6.9, no 7.0 con desempeño "Bueno").
+function unDecimal(nota) {
+  return nota === null ? null : Math.round(nota * 10) / 10;
+}
+
+// Boleta individual: nota de cada asignatura por período y promedio final de la asignatura.
+function construirBoleta(lista, periodos, ciclo) {
+  const asignaturas = [...new Set(lista.map((p) => p.asignatura))].sort();
+  const filas = asignaturas.map((asignatura) => {
+    const notas = Object.fromEntries(periodos.map((periodo) => [periodo, unDecimal(promedio(lista
+      .filter((p) => p.asignatura === asignatura && String(p.periodo) === String(periodo)).map((p) => p.promedio)))]));
+    return { asignatura, notas, final: unDecimal(promedio(Object.values(notas).filter((n) => n !== null))) };
+  });
+  const finales = filas.map((x) => x.final).filter((n) => n !== null);
+  return {
+    estudiante: lista[0].estudiante,
+    grado: lista[0].grado,
+    seccion: lista[0].seccion,
+    ciclo: ciclo ? `Año escolar ${String(ciclo.fecha_inicio).slice(0, 4)}` : '',
+    periodos,
+    filas,
+    general: unDecimal(promedio(finales)),
+  };
+}
+
+function reporteBoletasIndividuales(f, promedios, ciclos) {
+  const periodos = f.periodo ? [f.periodo] : Object.keys(PERIODOS);
+  const porEstudiante = promedios
+    .filter((p) => f.estudiante === TODA_LA_SECCION || String(p.estudiante?.id) === f.estudiante)
+    .reduce((acc, p) => ({ ...acc, [p.estudiante?.id]: [...(acc[p.estudiante?.id] || []), p] }), {});
+  const ciclo = ciclos.find((c) => String(c.id) === f.ciclo);
+  const boletas = Object.values(porEstudiante).map((lista) => construirBoleta(lista, periodos, ciclo))
+    .sort((a, b) => nombreCompleto(a.estudiante).localeCompare(nombreCompleto(b.estudiante)));
+  return {
+    boletas,
+    kpis: [],
+    grafico: null,
+    columnas: ['Estudiante', 'NIE', 'Asignatura', ...periodos.map((p) => PERIODOS[p]), 'Promedio'],
+    filas: boletas.flatMap((b) => b.filas.map((x) => [
+      nombreCompleto(b.estudiante), b.estudiante?.codigo_nie, x.asignatura,
+      ...periodos.map((p) => formatoNota(x.notas[p] ?? null)), formatoNota(x.final)])),
+  };
+}
+
 async function reporteBoletas(f) {
   const datos = await cargarCalificaciones();
   const promedios = datos.promedios.filter((p) => p.promedio !== null && coincide(p.idCiclo, f.ciclo)
     && coincide(p.idGrado, f.grado) && coincide(p.seccion, f.seccion) && coincide(p.periodo, f.periodo));
+  if (f.estudiante) return reporteBoletasIndividuales(f, promedios, datos.ciclos);
   const asignaturas = [...new Set(promedios.map((p) => p.asignatura))].sort();
   const estudiantes = Object.values(promedios.reduce((acc, p) => ({
     ...acc, [p.estudiante?.id]: [...(acc[p.estudiante?.id] || []), p],
@@ -306,11 +369,14 @@ const REPORTES = [
   {
     id: 'boletas',
     etiqueta: 'Boletas',
-    descripcion: 'Notas por asignatura de cada estudiante de una sección',
+    descripcion: 'Notas de una sección o boleta individual de cada estudiante para imprimir',
     categoria: 'academico',
     color: '#F59E0B',
     icono: FileText,
-    filtros: [filtroCiclo, { ...filtroGrado, requerido: true }, { ...filtroSeccion, requerido: true }, filtroPeriodo],
+    filtros: [
+      filtroCiclo, { ...filtroGrado, requerido: true }, { ...filtroSeccion, requerido: true },
+      filtroEstudianteBoleta, filtroPeriodo,
+    ],
     generar: reporteBoletas,
   },
   {

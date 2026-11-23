@@ -1,5 +1,5 @@
 import { obtenerCicloActivo, obtenerSeccionesConGrado } from './catalogos';
-import { actualizar, crear, obtenerTodos } from './recursos';
+import { actualizar, obtenerTodos } from './recursos';
 
 // En la base la matrícula solo es activa/inactiva; el estado visible depende también del ciclo.
 export function estadoMatricula(matricula, ciclo) {
@@ -9,10 +9,12 @@ export function estadoMatricula(matricula, ciclo) {
 
 export async function cargarMatriculas() {
   const { ciclos, activo } = await obtenerCicloActivo();
-  const [matriculas, estudiantes, { secciones }] = await Promise.all([
+  const [matriculas, estudiantes, { secciones }, aranceles, descuentos] = await Promise.all([
     obtenerTodos('matriculas'),
     obtenerTodos('estudiantes'),
     obtenerSeccionesConGrado(),
+    obtenerTodos('aranceles-base'),
+    obtenerTodos('descuentos-alumnos'),
   ]);
 
   const cicloPorId = Object.fromEntries(ciclos.map((c) => [c.id, c]));
@@ -40,16 +42,12 @@ export async function cargarMatriculas() {
   return {
     cicloActivo: activo,
     ciclos,
+    aranceles,
+    descuentos,
     estudiantes,
     matriculas: lista,
     secciones: secciones.map((s) => ({ ...s, nombre: s.nombre.trim(), ocupados: ocupados[s.id] || 0 })),
   };
-}
-
-export function registrarMatricula({ idEstudiante, idCiclo, idSeccion }) {
-  return crear('matriculas', {
-    id_estudiante: idEstudiante, id_ciclo: idCiclo, id_seccion: idSeccion, estado: true,
-  });
 }
 
 export function actualizarMatricula(id, datos) {

@@ -6,9 +6,10 @@ import AdminLayout from '../layouts/AdminLayout';
 import EnConstruccion from '../pages/admin/EnConstruccion';
 import Login from '../pages/auth/Login';
 import PortalPendiente from '../pages/portal/PortalPendiente';
+import { navegacionSecretaria } from '../config/navegacion';
 import { rutaInicio } from '../config/roles';
 import useAuthStore from '../store/authStore';
-import { PAGINAS_ADMIN } from './paginas';
+import { PAGINAS_ADMIN, PAGINAS_SECRETARIA } from './paginas';
 import RutaProtegida from './RutaProtegida';
 
 function Inicio() {
@@ -38,6 +39,17 @@ export default function AppRoutes() {
                 : <Route key={ruta} path={ruta.replace('/admin/', '')} element={<Pagina />} />
             ))}
             <Route path="*" element={<EnConstruccion />} />
+          </Route>
+        </Route>
+
+        <Route element={<RutaProtegida roles={['secretaria']} />}>
+          <Route path="/secretaria" element={<AdminLayout menu={navegacionSecretaria} />}>
+            {PAGINAS_SECRETARIA.map(({ ruta, componente: Pagina }) => (
+              ruta === '/secretaria'
+                ? <Route key={ruta} index element={<Pagina />} />
+                : <Route key={ruta} path={ruta.replace('/secretaria/', '')} element={<Pagina />} />
+            ))}
+            <Route path="*" element={<Navigate to="/secretaria" replace />} />
           </Route>
         </Route>
 

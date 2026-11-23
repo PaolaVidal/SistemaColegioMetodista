@@ -162,7 +162,7 @@ export default function CuadriculaHorario({
                     height: aPixeles(minutos(previa.fin) - minutos(previa.inicio)),
                   }}
                 >
-                  {`${previa.inicio}–${previa.fin}${previa.valido ? '' : ' · ocupado'}`}
+                  {`${previa.inicio}–${previa.fin}${previa.valido ? '' : ` · ${previa.detalle || 'ocupado'}`}`}
                 </div>
               )}
 

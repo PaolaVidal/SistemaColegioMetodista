@@ -10,15 +10,39 @@ import ModalFormulario from '../../../components/ui/ModalFormulario';
 import { mensajeError } from '../../../services/api';
 import { actualizar, crear, eliminar } from '../../../services/recursos';
 
-function FormularioAsignatura({ asignatura, onClose, onGuardado }) {
+// Código sugerido: primeras 3 letras del nombre, sin tildes y en mayúsculas (Matemática → MAT).
+// Si ya existe en otra asignatura se le agrega un número (MAT2, MAT3...).
+function sugerirCodigo(nombre, usados = []) {
+  const letras = nombre.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-zA-Z]/g, '')
+    .slice(0, 3)
+    .toUpperCase();
+  if (!letras) return '';
+  const ocupados = new Set(usados.map((c) => String(c).trim().toUpperCase()));
+  if (!ocupados.has(letras)) return letras;
+  let numero = 2;
+  while (ocupados.has(`${letras}${numero}`)) numero += 1;
+  return `${letras}${numero}`;
+}
+
+function FormularioAsignatura({
+  asignatura, codigosUsados, onClose, onGuardado,
+}) {
   const [form, setForm] = useState({
     nombre: asignatura?.nombre || '',
     codigo: asignatura?.codigo || '',
     descripcion: asignatura?.descripcion || '',
   });
+  // Al crear, el código sigue al nombre hasta que se edita a mano; al editar se respeta el existente.
+  const [codigoManual, setCodigoManual] = useState(Boolean(asignatura));
 
   function cambiar(campo, valor) {
     setForm((actual) => ({ ...actual, [campo]: valor }));
+  }
+
+  function cambiarNombre(nombre) {
+    setForm((actual) => ({
+      ...actual, nombre, codigo: codigoManual ? actual.codigo : sugerirCodigo(nombre, codigosUsados),
+    }));
   }
 
   return (
@@ -46,20 +70,29 @@ function FormularioAsignatura({ asignatura, onClose, onGuardado }) {
               className="input-field"
               maxLength={20}
               value={form.nombre}
-              onChange={(e) => cambiar('nombre', e.target.value)}
+              onChange={(e) => cambiarNombre(e.target.value)}
               placeholder="Ej: Matemática"
             />
           </Field>
         </div>
-        <Field id="asignatura-codigo" etiqueta="Código">
+        <Field id="asignatura-codigo" etiqueta={codigoManual ? 'Código' : 'Código (automático)'}>
           <input
             id="asignatura-codigo"
             className="input-field uppercase"
             maxLength={20}
             value={form.codigo}
-            onChange={(e) => cambiar('codigo', e.target.value)}
+            onChange={(e) => { setCodigoManual(true); cambiar('codigo', e.target.value.toUpperCase()); }}
             placeholder="MAT"
           />
+          {!asignatura && codigoManual && (
+            <button
+              type="button"
+              onClick={() => { setCodigoManual(false); cambiar('codigo', sugerirCodigo(form.nombre, codigosUsados)); }}
+              className="mt-1 text-[10px] text-gray-500 hover:text-brand-soft"
+            >
+              Usar código automático
+            </button>
+          )}
         </Field>
         <div className="col-span-3">
           <Field id="asignatura-descripcion" etiqueta="Descripción">
@@ -185,6 +218,7 @@ export default function TabAsignaturas({ datos, onCambio, onError }) {
       {modal && (
         <FormularioAsignatura
           asignatura={modal.asignatura}
+          codigosUsados={datos.asignaturas.filter((a) => a.id !== modal.asignatura?.id).map((a) => a.codigo)}
           onClose={() => setModal(null)}
           onGuardado={async (mensaje) => { setModal(null); await onCambio(mensaje); }}
         />

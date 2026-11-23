@@ -1,5 +1,5 @@
 import {
-  BarChart2, Bell, BookMarked, Briefcase, Calendar, CalendarClock, ClipboardList, Contact,
+  BarChart2, Bell, BookMarked, Briefcase, Calendar, CalendarClock, ClipboardList, Contact, Megaphone,
   DollarSign, FileText, GraduationCap, LayoutDashboard, Shield, Users,
 } from 'lucide-react';
 
@@ -119,10 +119,47 @@ const navegacionAdmin = [
   },
 ];
 
-export function buscarSeccion(pathname) {
-  return navegacionAdmin.find((item) => item.ruta === pathname)
-    || navegacionAdmin.find((item) => item.ruta !== '/admin' && pathname.startsWith(item.ruta))
-    || navegacionAdmin[0];
+// Menú de secretaría: finanzas, reportes y lectura de anuncios. Mismo diseño que el del administrador.
+export const navegacionSecretaria = [
+  {
+    etiqueta: 'Dashboard',
+    icono: LayoutDashboard,
+    ruta: '/secretaria',
+    titulo: 'Dashboard de Secretaría',
+    subtitulo: 'Resumen de cobros, pagos y cuentas pendientes',
+    disponible: true,
+  },
+  {
+    etiqueta: 'Pagos',
+    icono: DollarSign,
+    ruta: '/secretaria/pagos',
+    titulo: 'Gestión Financiera',
+    subtitulo: 'Registro de pagos, estados de cuenta, aranceles y descuentos',
+    disponible: true,
+  },
+  {
+    etiqueta: 'Reportes',
+    icono: BarChart2,
+    ruta: '/secretaria/reportes',
+    titulo: 'Reportes',
+    subtitulo: 'Información consolidada del sistema',
+    disponible: true,
+  },
+  {
+    etiqueta: 'Anuncios',
+    icono: Megaphone,
+    ruta: '/secretaria/anuncios',
+    titulo: 'Anuncios',
+    subtitulo: 'Comunicados publicados por la administración',
+    disponible: true,
+  },
+];
+
+// Sección del menú que corresponde a la ruta actual (la raíz del menú solo coincide exactamente).
+export function buscarSeccion(pathname, menu = navegacionAdmin) {
+  return menu.find((item) => item.ruta === pathname)
+    || menu.find((item) => item.ruta !== menu[0].ruta && pathname.startsWith(item.ruta))
+    || menu[0];
 }
 
 export default navegacionAdmin;

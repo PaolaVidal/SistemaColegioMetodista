@@ -4,6 +4,7 @@ import {
 import {
   Download, GraduationCap, Printer, RefreshCw,
 } from 'lucide-react';
+import BoletaEstudiante from './BoletaEstudiante';
 
 const COLORES = ['#c2416b', '#10B981', '#8B5CF6', '#F59E0B', '#60A5FA', '#EC4899', '#F87171', '#34D399'];
 const EJE = { fill: '#8b7a80', fontSize: 10 };
@@ -87,6 +88,17 @@ export default function VistaReporte({
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-8">
+        {resultado.boletas && (
+          <div className="zona-impresion space-y-6">
+            {resultado.boletas.length === 0 && (
+              <p className="rounded-2xl border border-line bg-base px-8 py-14 text-center text-sm text-gray-500">
+                El estudiante aún no tiene calificaciones registradas para los filtros elegidos.
+              </p>
+            )}
+            {resultado.boletas.map((b) => <BoletaEstudiante key={b.estudiante?.id} boleta={b} generado={generado} />)}
+          </div>
+        )}
+        {!resultado.boletas && (
         <div className="zona-impresion overflow-hidden rounded-2xl border border-line bg-base">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line bg-card px-8 py-6">
             <div className="flex items-center gap-3">
@@ -158,6 +170,7 @@ export default function VistaReporte({
             </div>
           </div>
         </div>
+        )}
       </div>
     </div>
   );

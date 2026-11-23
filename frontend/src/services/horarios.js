@@ -140,3 +140,15 @@ export function reemplazarAsignacion(bloque, idAsignacion) {
 export function crearBloque(idAsignacion, { dia, inicio, fin }) {
   return crear('horarios', { id_asignacion_curso: idAsignacion, ...posicion(dia, inicio, fin) });
 }
+
+// Bloques que chocan con el rango si se coloca ahí una clase de `asignacion`:
+// por la misma sección (dos clases a la vez) o por el mismo docente (en otra sección).
+export function conflictos(bloques, asignacion, { dia, inicio, fin }, excluir = []) {
+  return traslapes(bloques, { dia, inicio, fin }, excluir)
+    .map((b) => ({
+      bloque: b,
+      mismaSeccion: b.asignacion.id_seccion === asignacion.id_seccion,
+      mismoDocente: b.asignacion.id_docente === asignacion.id_docente,
+    }))
+    .filter((c) => c.mismaSeccion || c.mismoDocente);
+}

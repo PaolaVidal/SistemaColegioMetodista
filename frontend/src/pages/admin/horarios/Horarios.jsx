@@ -10,10 +10,13 @@ import SelectFiltro from '../../../components/ui/SelectFiltro';
 import { mensajeError } from '../../../services/api';
 import {
   DURACION_CLASE, aHora, cargarHorarios, crearBloque, eliminarBloque, intercambiarBloques, mensajeHorario, minutos,
-  moverBloque, reemplazarAsignacion, traslapes,
+  moverBloque, reemplazarAsignacion,
 } from '../../../services/horarios';
 import { nombreCiclo } from '../../../utils/formato';
+import AvisoConflicto from './AvisoConflicto';
 import BloqueModal from './BloqueModal';
+import explicarConflicto from './conflictos';
+import VistaPreviaConflicto from './VistaPreviaConflicto';
 import CuadriculaHorario, { iniciarArrastre } from './CuadriculaHorario';
 
 const PASO_MINUTOS = 10;
@@ -52,7 +55,9 @@ export default function Horarios() {
   const [edicion, setEdicion] = useState(false);
   const [modal, setModal] = useState(null); // { bloque } | { inicial }
   const [arrastre, setArrastre] = useState(null); // { bloque, desfase } | { asignacion }
-  const [vistaPrevia, setVistaPrevia] = useState(null); // { dia, inicio, fin, valido }
+  const [vistaPrevia, setVistaPrevia] = useState(null); // { dia, inicio, fin, valido, detalle, explicacion }
+  const [conflicto, setConflicto] = useState(null); // { mensaje, previa, pista }
+  const [previaAbierta, setPreviaAbierta] = useState(null);
   const [sobrePapelera, setSobrePapelera] = useState(false);
   const [guardando, setGuardando] = useState(false);
 
@@ -93,9 +98,17 @@ export default function Horarios() {
     const actual = acc[clave] || { nombre: clave, color: b.asignacion.color, horas: 0 };
     return { ...acc, [clave]: { ...actual, horas: actual.horas + (minutos(b.fin) - minutos(b.inicio)) / 60 } };
   }, {})).sort((a, b) => b.horas - a.horas);
-  const ocupadoMensaje = vista === 'seccion'
-    ? 'La sección ya tiene una clase en ese horario.'
-    : 'El docente ya tiene una clase en ese horario.';
+
+  // Revisa todos los horarios (no solo los visibles): sección y docente.
+  function revisar(asignacion, rango, excluir = []) {
+    return explicarConflicto(datos.bloques, asignacion, rango, excluir, vista);
+  }
+
+  function mostrarConflicto(explicacion, pista = '') {
+    setAviso('');
+    setError('');
+    setConflicto({ ...explicacion, pista: explicacion.previa ? '' : pista });
+  }
 
   function terminarArrastre() {
     setArrastre(null);
@@ -107,6 +120,7 @@ export default function Horarios() {
   async function aplicar(cambioLocal, guardar, mensaje) {
     setError('');
     setAviso('');
+    setConflicto(null);
     setDatos((actual) => ({ ...actual, bloques: cambioLocal(actual.bloques) }));
     setGuardando(true);
     try {
@@ -128,10 +142,12 @@ export default function Horarios() {
     const deseado = Math.round((minutoCursor - (arrastre.desfase || 0)) / PASO_MINUTOS) * PASO_MINUTOS;
     const inicio = Math.min(Math.max(deseado, desde), hasta - duracion);
     const rango = { dia, inicio: aHora(inicio), fin: aHora(inicio + duracion) };
-    const valido = traslapes(visibles, rango, arrastre.bloque ? [arrastre.bloque.id] : []).length === 0;
-    if (vistaPrevia?.dia !== dia || vistaPrevia?.inicio !== rango.inicio || vistaPrevia?.valido !== valido) {
-      setVistaPrevia({ ...rango, valido });
-    }
+    if (vistaPrevia?.dia === dia && vistaPrevia?.inicio === rango.inicio) return;
+    const asignacion = arrastre.bloque ? arrastre.bloque.asignacion : arrastre.asignacion;
+    const explicacion = revisar(asignacion, rango, arrastre.bloque ? [arrastre.bloque.id] : []);
+    setVistaPrevia({
+      ...rango, valido: !explicacion, detalle: explicacion?.corto, explicacion,
+    });
   }
 
   function alSoltarEnDia() {
@@ -140,8 +156,7 @@ export default function Horarios() {
     terminarArrastre();
     if (!actual || !destino || guardando) return;
     if (!destino.valido) {
-      setAviso('');
-      setError(`${ocupadoMensaje} Suelta el bloque sobre otro para intercambiarlos.`);
+      mostrarConflicto(destino.explicacion, actual.bloque ? 'Suelta el bloque sobre otro para intercambiarlos.' : '');
       return;
     }
     const celda = { dia: destino.dia, inicio: destino.inicio, fin: destino.fin };
@@ -188,6 +203,13 @@ export default function Horarios() {
       const posicion = (b, de) => ({
         ...b, dia_semana: de.dia_semana, inicio: de.inicio, fin: de.fin,
       });
+      const rango = (b) => ({ dia: b.dia_semana, inicio: b.inicio, fin: b.fin });
+      const choque = revisar(bloque.asignacion, rango(destino), [bloque.id, destino.id])
+        || revisar(destino.asignacion, rango(bloque), [bloque.id, destino.id]);
+      if (choque) {
+        mostrarConflicto(choque);
+        return;
+      }
       aplicar(
         (bloques) => bloques.map((b) => {
           if (b.id === bloque.id) return posicion(b, destino);
@@ -201,6 +223,12 @@ export default function Horarios() {
     }
 
     const { asignacion } = actual;
+    const rangoDestino = { dia: destino.dia_semana, inicio: destino.inicio, fin: destino.fin };
+    const choque = revisar(asignacion, rangoDestino, [destino.id]);
+    if (choque) {
+      mostrarConflicto(choque);
+      return;
+    }
     aplicar(
       (bloques) => bloques.map((b) => (b.id === destino.id
         ? { ...b, id_asignacion_curso: asignacion.id, asignacion } : b)),
@@ -223,6 +251,7 @@ export default function Horarios() {
   async function alGuardar(mensaje) {
     setModal(null);
     setError('');
+    setConflicto(null);
     setAviso(mensaje);
     await cargar();
   }
@@ -236,7 +265,7 @@ export default function Horarios() {
               key={valor}
               type="button"
               aria-pressed={vista === valor}
-              onClick={() => setVista(valor)}
+              onClick={() => { setVista(valor); setConflicto(null); }}
               className={`flex items-center gap-1.5 px-3 py-2 font-display text-xs font-medium transition-colors
                 ${vista === valor ? 'bg-brand text-white' : 'bg-base text-gray-500 hover:text-gray-300'}`}
             >
@@ -267,6 +296,7 @@ export default function Horarios() {
 
       <Alerta tipo="exito">{aviso}</Alerta>
       <Alerta>{error}</Alerta>
+      <AvisoConflicto conflicto={conflicto} pista={conflicto?.pista} onVer={() => setPreviaAbierta(conflicto.previa)} />
 
       <div className="flex flex-col gap-4 xl:flex-row">
         <div className="flex flex-shrink-0 flex-col gap-4 xl:w-56">
@@ -373,9 +403,14 @@ export default function Horarios() {
           bloque={modal.bloque}
           inicial={modal.inicial}
           asignaciones={asignacionesVista.length ? asignacionesVista : datos.asignaciones}
+          revisar={revisar}
+          bloques={datos.bloques}
           onClose={() => setModal(null)}
           onGuardado={alGuardar}
         />
+      )}
+      {previaAbierta && (
+        <VistaPreviaConflicto previa={previaAbierta} bloques={datos.bloques} onClose={() => setPreviaAbierta(null)} />
       )}
     </div>
   );

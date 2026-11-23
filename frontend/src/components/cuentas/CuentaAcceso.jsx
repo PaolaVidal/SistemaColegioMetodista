@@ -64,7 +64,9 @@ export default function CuentaAcceso({
 
   async function copiar() {
     try {
-      await copiarCredenciales({ usuario: form.usuario_nombre, correo: correoCuenta, contrasena: form.usuario_contrasena });
+      await copiarCredenciales({
+        usuario: form.usuario_nombre, correo: correoCuenta, contrasena: form.usuario_contrasena,
+      });
       setCopiado(true);
       setTimeout(() => setCopiado(false), 2000);
     } catch {
@@ -77,7 +79,10 @@ export default function CuentaAcceso({
 
   return (
     <>
-      <label className="col-span-2 flex cursor-pointer items-start gap-3 rounded-lg border border-line bg-base p-3">
+      <label
+        aria-label="Crear cuenta de acceso"
+        className="col-span-2 flex cursor-pointer items-start gap-3 rounded-lg border border-line bg-base p-3"
+      >
         <input
           type="checkbox"
           className="mt-0.5 accent-[#c2416b]"

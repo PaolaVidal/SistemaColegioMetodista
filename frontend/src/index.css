@@ -99,6 +99,16 @@
     width: 100%;
   }
 
+  /* Cada boleta individual en su propia hoja. */
+  .zona-impresion .boleta {
+    break-inside: avoid;
+    border: none !important;
+  }
+
+  .zona-impresion .boleta + .boleta {
+    break-before: page;
+  }
+
   .zona-impresion .max-h-\[480px\] {
     max-height: none;
     overflow: visible;

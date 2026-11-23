@@ -3,7 +3,8 @@ import {
 } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  CheckCircle, ClipboardList, ClipboardPlus, ClipboardX, Eye, Filter, GraduationCap, Heart, Pencil, Pill, Plus, ShieldAlert, Users, XCircle,
+  CheckCircle, ClipboardList, ClipboardPlus, ClipboardX, Eye, Filter, GraduationCap, Heart, Pencil, Pill, Plus,
+  ShieldAlert, Users, XCircle,
 } from 'lucide-react';
 import Credenciales from '../../../components/cuentas/Credenciales';
 import credencialesDe from '../../../components/cuentas/credencialesDe';
@@ -75,7 +76,8 @@ export default function Estudiantes() {
   const [aviso, setAviso] = useState('');
   const [filtros, setFiltros] = useState(FILTROS_VACIOS);
   const [pagina, setPagina] = useState(1);
-  const [modal, setModal] = useState(null); // { tipo: 'crear' | 'editar' | 'ver' | 'matricular' | 'pasos' | ..., estudiante }
+  // { tipo: 'crear' | 'editar' | 'ver' | 'matricular' | 'pasos' | 'asociar' | 'nuevoResponsable', estudiante }
+  const [modal, setModal] = useState(null);
   // Registro en curso de un estudiante nuevo: lo creado y los pasos siguientes ya completados.
   const [flujo, setFlujo] = useState(null);
   const [credenciales, setCredenciales] = useState(null);
@@ -427,7 +429,10 @@ export default function Estudiantes() {
           estudiantes={datos.estudiantes}
           estudiantesIniciales={[{ ...flujo.estudiante, es_contacto_principal: flujo.responsables.length === 0 }]}
           onClose={volver}
-          onGuardado={(mensaje, familia) => alAsociarResponsable(nombreCompleto(familia.responsable), credencialesDe(familia))}
+          onGuardado={(mensaje, familia) => alAsociarResponsable(
+            nombreCompleto(familia.responsable),
+            credencialesDe(familia),
+          )}
         />
       )}
       {modal?.tipo === 'ver' && (

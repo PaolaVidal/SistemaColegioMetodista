@@ -1,12 +1,16 @@
-import { useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { GraduationCap, LogOut } from 'lucide-react';
-import { nombreRol } from '../../config/roles';
+import { nombreRol, rutaInicio } from '../../config/roles';
 import useAuthStore from '../../store/authStore';
 
 // Destino temporal para los roles cuyo portal aún no está construido.
 export default function PortalPendiente() {
   const { usuario, cerrarSesion } = useAuthStore();
   const navegar = useNavigate();
+
+  // Si el rol ya tiene su propio panel (p. ej. secretaría), se le lleva allí.
+  const inicio = rutaInicio(usuario);
+  if (inicio !== '/portal') return <Navigate to={inicio} replace />;
 
   async function salir() {
     await cerrarSesion();
@@ -23,7 +27,7 @@ export default function PortalPendiente() {
         <p className="mt-1 text-xs text-brand-soft">{nombreRol(usuario?.rol)}</p>
         <p className="mt-4 text-sm text-gray-400">
           El portal para su rol estará disponible próximamente.
-          Por ahora solo está habilitado el portal del administrador.
+          Por ahora están habilitados los portales de administración y secretaría.
         </p>
         <button
           type="button"

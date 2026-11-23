@@ -1,16 +1,20 @@
-import { Fragment, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import {
-  AlertTriangle, ArrowRight, Calendar, Check, ChevronLeft, GraduationCap, Layers, Search, User, UserPlus, X,
+  AlertTriangle, ArrowRight, Calendar, Check, ChevronLeft, GraduationCap, Layers, Receipt, Search, User, UserPlus, X,
 } from 'lucide-react';
 import Alerta from '../../../components/ui/Alerta';
 import { mensajeError } from '../../../services/api';
-import { registrarMatricula } from '../../../services/matriculas';
+import { inscribir } from '../../../services/aranceles';
 import {
-  fechaLarga, iniciales, nombreCiclo, nombreCompleto,
+  dinero, fechaLarga, iniciales, nombreCiclo, nombreCompleto,
 } from '../../../utils/formato';
 import { colorOcupacion } from './estados';
+import PasoAranceles, {
+  datosAranceles, errorCobros, inicializarCobros, resumenCobros,
+} from './PasoAranceles';
 
-const PASOS = ['Estudiante', 'Ciclo', 'Grado', 'Sección', 'Confirmación'];
+const PASOS = ['Estudiante', 'Ciclo', 'Grado', 'Sección', 'Aranceles', 'Confirmación'];
+const PASO_ARANCELES = 5;
 
 function PuntoPaso({ numero, actual, etiqueta }) {
   const hecho = numero < actual;
@@ -59,7 +63,8 @@ function Advertencia({ children }) {
 
 // Con `estudianteFijo` el asistente omite el paso de selección de estudiante (se usa desde Estudiantes).
 export default function MatriculaWizard({
-  estudiantes = [], ciclos, secciones, matriculas, estudianteFijo = null, onNuevoEstudiante, onClose, onRegistrada,
+  estudiantes = [], ciclos, secciones, matriculas, aranceles = [], descuentos = [], estudianteFijo = null,
+  onNuevoEstudiante, onClose, onRegistrada,
 }) {
   const primerPaso = estudianteFijo ? 2 : 1;
   const pasosVisibles = PASOS.slice(primerPaso - 1);
@@ -69,8 +74,19 @@ export default function MatriculaWizard({
   const [ciclo, setCiclo] = useState(null);
   const [idGrado, setIdGrado] = useState(null);
   const [seccion, setSeccion] = useState(null);
+  const [cobros, setCobros] = useState(null); // aranceles elegidos y descuentos, por id de arancel
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
+
+  const arancelesCiclo = aranceles.filter((a) => a.id_ciclo === ciclo?.id)
+    .sort((a, b) => a.nombre_concepto.localeCompare(b.nombre_concepto));
+
+  // Al llegar al paso de aranceles se preparan con los descuentos que el estudiante ya tenga.
+  useEffect(() => {
+    if (paso === PASO_ARANCELES && !cobros && ciclo) {
+      setCobros(inicializarCobros(arancelesCiclo, descuentos, estudiante?.id));
+    }
+  }, [paso, cobros, ciclo, arancelesCiclo, descuentos, estudiante]);
 
   const termino = buscar.trim().toLowerCase();
   const candidatos = estudiantes
@@ -88,7 +104,11 @@ export default function MatriculaWizard({
     .sort((a, b) => a.nombre.localeCompare(b.nombre));
   const matriculaActual = matriculas.find((m) => m.id_estudiante === estudiante?.id && m.ciclo?.activo);
 
-  const puedeAvanzar = [Boolean(estudiante), Boolean(ciclo), Boolean(idGrado), Boolean(seccion), true][paso - 1];
+  const problemaCobros = cobros ? errorCobros(cobros) : '';
+  const puedeAvanzar = [
+    Boolean(estudiante), Boolean(ciclo), Boolean(idGrado), Boolean(seccion), Boolean(cobros) && !problemaCobros, true,
+  ][paso - 1];
+  const resumen = cobros ? resumenCobros(arancelesCiclo, cobros, ciclo) : [];
 
   function cuposLibres(lista) {
     return lista.reduce((suma, s) => suma + Math.max(0, (s.capacidad || 0) - s.ocupados), 0);
@@ -98,9 +118,15 @@ export default function MatriculaWizard({
     setError('');
     setGuardando(true);
     try {
-      await registrarMatricula({ idEstudiante: estudiante.id, idCiclo: ciclo.id, idSeccion: seccion.id });
+      const resultado = await inscribir({
+        id_estudiante: estudiante.id,
+        id_ciclo: ciclo.id,
+        id_seccion: seccion.id,
+        aranceles: cobros ? datosAranceles(arancelesCiclo, cobros) : [],
+      });
+      const cuotas = resultado.cuentas.length;
       onRegistrada(
-        `Matrícula de ${nombreCompleto(estudiante)} registrada correctamente.`,
+        `Matrícula de ${nombreCompleto(estudiante)} registrada correctamente.${cuotas ? ` Se generaron ${cuotas} cuota(s) por cobrar.` : ''}`,
         `${seccion.grado} — Sección ${seccion.nombre} (${nombreCiclo(ciclo)})`,
       );
     } catch (e) {
@@ -179,7 +205,9 @@ export default function MatriculaWizard({
                   <Opcion
                     key={e.id}
                     seleccionada={estudiante?.id === e.id}
-                    onClick={() => { setEstudiante(e); setCiclo(null); setIdGrado(null); setSeccion(null); }}
+                    onClick={() => {
+                      setEstudiante(e); setCiclo(null); setIdGrado(null); setSeccion(null); setCobros(null);
+                    }}
                   >
                     <div className="bg-brand-dark flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full text-xs font-bold text-white">
                       {iniciales(e.nombres, e.apellidos)}
@@ -215,7 +243,7 @@ export default function MatriculaWizard({
                     key={c.id}
                     seleccionada={ciclo?.id === c.id}
                     deshabilitada={yaMatriculado}
-                    onClick={() => { setCiclo(c); setIdGrado(null); setSeccion(null); }}
+                    onClick={() => { setCiclo(c); setIdGrado(null); setSeccion(null); setCobros(null); }}
                   >
                     <div
                       className={`flex h-10 w-10 items-center justify-center rounded-xl font-display text-xs font-bold text-white
@@ -306,7 +334,14 @@ export default function MatriculaWizard({
             </>
           )}
 
-          {paso === 5 && (
+          {paso === PASO_ARANCELES && cobros && (
+            <>
+              <PasoAranceles aranceles={arancelesCiclo} cobros={cobros} ciclo={ciclo} onChange={setCobros} />
+              {problemaCobros && <p className="text-[11px] text-[#F59E0B]">{problemaCobros}</p>}
+            </>
+          )}
+
+          {paso === PASOS.length && (
             <div className="space-y-4">
               <p className="text-xs text-gray-400">Revisa la información antes de confirmar la matrícula.</p>
               <Alerta>{error}</Alerta>
@@ -340,6 +375,30 @@ export default function MatriculaWizard({
                     <span className="text-xs font-medium text-white">{fila.valor}</span>
                   </div>
                 ))}
+              </div>
+              <div className="overflow-hidden rounded-xl border border-line">
+                <p className="flex items-center gap-2 border-b border-line bg-card px-4 py-2.5 font-display text-xs font-semibold text-white">
+                  <Receipt size={13} className="text-brand-soft" />Cobros que se generarán
+                </p>
+                {resumen.length === 0 && <p className="px-4 py-3 text-xs text-gray-500">Sin aranceles: no se generarán cuotas.</p>}
+                {resumen.map((r) => (
+                  <div key={r.arancel.id} className="flex items-center justify-between border-b border-line px-4 py-2 text-xs last:border-b-0">
+                    <span className="text-gray-300">
+                      {r.arancel.nombre_concepto}
+                      {r.monto < r.estandar && <span className="ml-2 text-[10px] text-[#10B981]">con descuento</span>}
+                    </span>
+                    <span className="text-gray-400">
+                      {r.cuotas > 1 ? `${r.cuotas} × ${dinero(r.monto)} = ` : ''}
+                      <span className="font-semibold text-white">{dinero(r.subtotal)}</span>
+                    </span>
+                  </div>
+                ))}
+                {resumen.length > 0 && (
+                  <div className="flex justify-between bg-card px-4 py-2 text-xs font-bold text-white">
+                    <span>Total del ciclo</span>
+                    <span>{dinero(resumen.reduce((s, r) => s + r.subtotal, 0))}</span>
+                  </div>
+                )}
               </div>
             </div>
           )}

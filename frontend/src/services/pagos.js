@@ -13,13 +13,15 @@ function estadoVisible(cuenta, abonado) {
 
 export async function cargarFinanzas() {
   const { activo: ciclo } = await obtenerCicloActivo();
-  const [cuentas, pagos, estudiantes, matriculas, { secciones }] = await Promise.all([
+  const [cuentas, pagos, estudiantes, matriculas, { secciones }, aranceles] = await Promise.all([
     obtenerTodos('cuentas-por-cobrar'),
     obtenerTodos('pagos'),
     obtenerTodos('estudiantes'),
     ciclo ? obtenerTodos('matriculas', { id_ciclo: ciclo.id }) : [],
     obtenerSeccionesConGrado(ciclo?.id),
+    obtenerTodos('aranceles-base'),
   ]);
+  const arancelPorId = Object.fromEntries(aranceles.map((a) => [a.id, a]));
 
   const seccionPorId = Object.fromEntries(secciones.map((s) => [s.id, s]));
   const ubicacionPorEstudiante = Object.fromEntries(matriculas.map((m) => {
@@ -43,6 +45,8 @@ export async function cargarFinanzas() {
       total: redondear(Number(c.monto_original) + Number(c.monto_mora || 0)),
       abonado,
       saldo: Number(c.saldo_pendiente),
+      // Cobrada por debajo del monto del arancel: tiene un descuento o beca aplicada.
+      conDescuento: Number(c.monto_original) < Number(arancelPorId[c.id_arancel]?.monto_estandar || 0),
       estadoVisible: estadoVisible(c, abonado),
     };
   });
@@ -59,14 +63,14 @@ export async function cargarFinanzas() {
   };
 }
 
+// El servidor asigna el número de comprobante (REC-AAAAMMDD-0001) y lo devuelve en la respuesta.
 export function registrarPago({
-  idCuenta, monto, fecha, comprobante, concepto,
+  idCuenta, monto, fecha, concepto,
 }) {
   return crear('pagos', {
     id_cuenta_cobrar: idCuenta,
     monto_pago: monto,
     fecha_pago: fecha,
-    numero_comprobante: comprobante,
     concepto,
   });
 }

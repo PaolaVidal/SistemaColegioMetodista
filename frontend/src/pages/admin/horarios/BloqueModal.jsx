@@ -7,10 +7,12 @@ import Modal from '../../../components/ui/Modal';
 import {
   DIAS, eliminarBloque, guardarBloque, mensajeHorario,
 } from '../../../services/horarios';
+import AvisoConflicto from './AvisoConflicto';
+import VistaPreviaConflicto from './VistaPreviaConflicto';
 
 // Crear, editar o eliminar un bloque del horario semanal.
 export default function BloqueModal({
-  bloque, inicial, asignaciones, onClose, onGuardado,
+  bloque, inicial, asignaciones, bloques, revisar, onClose, onGuardado,
 }) {
   const [form, setForm] = useState({
     idAsignacion: String(bloque?.id_asignacion_curso || inicial?.idAsignacion || ''),
@@ -19,6 +21,8 @@ export default function BloqueModal({
     fin: bloque?.fin || inicial?.fin || '08:20',
   });
   const [error, setError] = useState('');
+  const [conflicto, setConflicto] = useState(null);
+  const [previaAbierta, setPreviaAbierta] = useState(false);
   const [procesando, setProcesando] = useState(false);
 
   function cambiar(campo, valor) {
@@ -27,6 +31,7 @@ export default function BloqueModal({
 
   async function ejecutar(accion, mensaje) {
     setError('');
+    setConflicto(null);
     setProcesando(true);
     try {
       await accion();
@@ -44,6 +49,15 @@ export default function BloqueModal({
     }
     if (form.inicio >= form.fin) {
       setError('La hora final debe ser posterior a la inicial.');
+      return;
+    }
+    // Revisa choques con la sección y con el docente antes de enviar.
+    const asignacion = asignaciones.find((a) => String(a.id) === form.idAsignacion);
+    const rango = { dia: form.dia, inicio: form.inicio, fin: form.fin };
+    const choque = asignacion && revisar?.(asignacion, rango, bloque ? [bloque.id] : []);
+    if (choque) {
+      setError('');
+      setConflicto(choque);
       return;
     }
     ejecutar(() => guardarBloque(bloque?.id, {
@@ -78,6 +92,10 @@ export default function BloqueModal({
       )}
     >
       <Alerta>{error}</Alerta>
+      <AvisoConflicto conflicto={conflicto} onVer={() => setPreviaAbierta(true)} />
+      {previaAbierta && conflicto?.previa && (
+        <VistaPreviaConflicto previa={conflicto.previa} bloques={bloques} onClose={() => setPreviaAbierta(false)} />
+      )}
       <div className="grid grid-cols-3 gap-3">
         <div className="col-span-3">
           <Field id="bloque-asignacion" etiqueta="Asignatura — docente — sección">

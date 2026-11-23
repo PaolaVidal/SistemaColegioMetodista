@@ -29,7 +29,7 @@ function FormularioGrado({ grado, onClose, onGuardado }) {
         <input
           id="grado-nombre"
           className="input-field"
-          maxLength={15}
+          maxLength={30}
           value={nombre}
           onChange={(e) => setNombre(e.target.value)}
           placeholder="Ej: 6to Básico"

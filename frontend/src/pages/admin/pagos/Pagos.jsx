@@ -1,8 +1,10 @@
 import {
   useCallback, useEffect, useMemo, useState,
 } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  Activity, AlertTriangle, Calendar, Clock, DollarSign, Filter, GraduationCap, Receipt, RotateCcw, TrendingUp,
+  Activity, AlertTriangle, BadgePercent, Calendar, Clock, DollarSign, Filter, GraduationCap, Receipt, RotateCcw, Tag,
+  TrendingUp,
   Users, Wallet,
 } from 'lucide-react';
 import Alerta from '../../../components/ui/Alerta';
@@ -13,6 +15,7 @@ import SelectFiltro from '../../../components/ui/SelectFiltro';
 import { mensajeError } from '../../../services/api';
 import { cargarFinanzas } from '../../../services/pagos';
 import { dinero, nombreCompleto } from '../../../utils/formato';
+import ArancelesDescuentos from './aranceles/ArancelesDescuentos';
 import EstadoCuentaDrawer from './EstadoCuentaDrawer';
 import { ESTADOS_CUENTA, PRIORIDAD } from './estados';
 import RegistrarPagoModal from './RegistrarPagoModal';
@@ -27,7 +30,10 @@ const PESTANAS = [
   { id: 'estados', etiqueta: 'Estados de cuenta', icono: Activity },
   { id: 'pendientes', etiqueta: 'Pagos pendientes', icono: AlertTriangle },
   { id: 'recibidos', etiqueta: 'Pagos recibidos', icono: Receipt },
+  { id: 'aranceles', etiqueta: 'Aranceles', icono: Tag },
+  { id: 'descuentos', etiqueta: 'Descuentos y becas', icono: BadgePercent },
 ];
+const PESTANAS_ARANCELES = ['aranceles', 'descuentos'];
 
 function Kpi({
   icono: Icono, etiqueta, valor, detalle, color,
@@ -73,6 +79,17 @@ export default function Pagos() {
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  // Permite abrir una pestaña concreta desde otra página (p. ej. el dashboard de secretaría).
+  const ubicacion = useLocation();
+  const navegar = useNavigate();
+  useEffect(() => {
+    const pedida = ubicacion.state?.pestana;
+    if (pedida && PESTANAS.some((p) => p.id === pedida)) {
+      setPestana(pedida);
+      navegar(ubicacion.pathname, { replace: true, state: null });
+    }
+  }, [ubicacion.state, ubicacion.pathname, navegar]);
 
   const termino = filtros.buscar.trim().toLowerCase();
 
@@ -129,7 +146,8 @@ export default function Pagos() {
   const listas = {
     cuentas: cuentasFiltradas, estados: estadosCuenta, pendientes, recibidos: pagosRecibidos,
   };
-  const { pagina: paginaActual, totalPaginas, filas } = paginar(listas[pestana], pagina, FILAS);
+  const { pagina: paginaActual, totalPaginas, filas } = paginar(listas[pestana] || [], pagina, FILAS);
+  const enAranceles = PESTANAS_ARANCELES.includes(pestana);
 
   function cambiarFiltro(campo, valor) {
     setFiltros((actual) => ({ ...actual, [campo]: valor }));
@@ -224,6 +242,9 @@ export default function Pagos() {
         </div>
       )}
 
+      {enAranceles && <ArancelesDescuentos key={pestana} vista={pestana} onCambio={cargar} />}
+
+      {!enAranceles && (
       <div className="rounded-xl border border-line bg-card p-4">
         <div className="flex flex-wrap items-center gap-2">
           <Buscador
@@ -278,7 +299,9 @@ export default function Pagos() {
           <span className="ml-auto text-xs text-gray-500">{`${listas[pestana].length} registros`}</span>
         </div>
       </div>
+      )}
 
+      {!enAranceles && (
       <div className="overflow-hidden rounded-xl border border-line bg-card">
         <div className="overflow-x-auto">
           {pestana === 'cuentas' && (
@@ -299,6 +322,7 @@ export default function Pagos() {
           unidad="registros"
         />
       </div>
+      )}
 
       {estudianteDrawer && (
         <EstadoCuentaDrawer

@@ -25,6 +25,8 @@ export default function MatricularEstudiante({ estudiante, onClose, onRegistrada
         ciclos={datos.ciclos}
         secciones={datos.secciones}
         matriculas={datos.matriculas}
+        aranceles={datos.aranceles}
+        descuentos={datos.descuentos}
         estudianteFijo={estudiante}
         onClose={onClose}
         onRegistrada={onRegistrada}

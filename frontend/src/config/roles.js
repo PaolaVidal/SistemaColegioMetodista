@@ -1,7 +1,7 @@
 // Roles normalizados que devuelve la API en `usuario.rol`.
 export const ROLES = {
   administrador: { nombre: 'Administrador', inicio: '/admin' },
-  secretaria: { nombre: 'Secretaría', inicio: '/portal' },
+  secretaria: { nombre: 'Secretaría', inicio: '/secretaria' },
   docente: { nombre: 'Docente', inicio: '/portal' },
   estudiante: { nombre: 'Estudiante', inicio: '/portal' },
   responsable: { nombre: 'Encargado', inicio: '/portal' },

@@ -124,7 +124,8 @@ export default function ResponsableModal({
         <Field id="resp-parentesco" etiqueta="Parentesco">
           <select id="resp-parentesco" name="parentesco" className="input-field" value={form.parentesco} onChange={alEscribir}>
             <option value="">Sin especificar</option>
-            {[...new Set([...PARENTESCOS, form.parentesco].filter(Boolean))].map((p) => <option key={p} value={p}>{p}</option>)}
+            {[...new Set([...PARENTESCOS, form.parentesco].filter(Boolean))]
+              .map((p) => <option key={p} value={p}>{p}</option>)}
           </select>
         </Field>
         <Field id="resp-telefono" etiqueta="Teléfono">

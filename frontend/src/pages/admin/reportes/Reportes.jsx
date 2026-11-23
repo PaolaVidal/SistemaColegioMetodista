@@ -12,13 +12,23 @@ import REPORTES from './definiciones';
 import VistaReporte from './VistaReporte';
 
 async function cargarCatalogo() {
-  const [{ ciclos, activo }, { secciones }, asignaturas, cuentas] = await Promise.all([
+  const [{ ciclos, activo }, { secciones }, asignaturas, cuentas, matriculas, estudiantes] = await Promise.all([
     obtenerCicloActivo(),
     obtenerSeccionesConGrado(),
     obtenerTodos('asignaturas'),
     obtenerTodos('cuentas-por-cobrar'),
+    obtenerTodos('matriculas'),
+    obtenerTodos('estudiantes'),
   ]);
+  const seccionPorId = Object.fromEntries(secciones.map((s) => [s.id, s]));
+  const estudiantePorId = Object.fromEntries(estudiantes.map((e) => [e.id, e]));
   return {
+    matriculas: matriculas.filter((m) => estudiantePorId[m.id_estudiante]).map((m) => ({
+      idCiclo: m.id_ciclo,
+      idGrado: seccionPorId[m.id_seccion]?.id_grado,
+      seccion: seccionPorId[m.id_seccion]?.nombre?.trim(),
+      estudiante: estudiantePorId[m.id_estudiante],
+    })),
     ciclos,
     cicloActivo: activo,
     grados: [...new Map(secciones.map((s) => [s.id_grado, s.grado])).entries()].sort((a, b) => a[0] - b[0]),
@@ -26,6 +36,12 @@ async function cargarCatalogo() {
     asignaturas: asignaturas.map((a) => a.nombre).sort(),
     conceptos: [...new Set(cuentas.map((c) => c.concepto))].sort(),
   };
+}
+
+// Cambia un filtro y vacía los que dependen de él (p. ej. el estudiante al cambiar de sección).
+function cambiarFiltro(definicion, filtros, id, valor) {
+  const dependientes = definicion.filtros.filter((f) => f.dependeDe?.includes(id)).map((f) => [f.id, '']);
+  return { ...filtros, [id]: valor, ...Object.fromEntries(dependientes) };
 }
 
 function ahora() {
@@ -114,7 +130,7 @@ export default function Reportes() {
     return definicion.filtros
       .filter((f) => filtros[f.id])
       .map((f) => {
-        const opcion = f.opciones?.(catalogo).find(([valor]) => valor === filtros[f.id]);
+        const opcion = f.opciones?.(catalogo, filtros).find(([valor]) => valor === filtros[f.id]);
         return `${f.etiqueta}: ${opcion ? opcion[1] : filtros[f.id]}`;
       })
       .join(' · ');
@@ -188,10 +204,10 @@ export default function Reportes() {
                         id={`rep-${f.id}`}
                         className="input-field py-2.5 text-sm"
                         value={filtros[f.id] || ''}
-                        onChange={(e) => setFiltros({ ...filtros, [f.id]: e.target.value })}
+                        onChange={(e) => setFiltros(cambiarFiltro(definicion, filtros, f.id, e.target.value))}
                       >
                         <option value="">{f.vacio || (f.requerido ? 'Seleccionar...' : 'Todos')}</option>
-                        {f.opciones(catalogo).map(([valor, texto]) => (
+                        {f.opciones(catalogo, filtros).map(([valor, texto]) => (
                           <option key={valor} value={valor}>{texto}</option>
                         ))}
                       </select>

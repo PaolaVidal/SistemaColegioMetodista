@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import {
-  GraduationCap, Heart, KeyRound, User,
+  GraduationCap, Heart, KeyRound, User, Users,
 } from 'lucide-react';
 import CuentaAcceso from '../../../components/cuentas/CuentaAcceso';
 import Alerta from '../../../components/ui/Alerta';
@@ -10,9 +10,11 @@ import Modal from '../../../components/ui/Modal';
 import SiNoField from '../../../components/ui/SiNoField';
 import { mensajeError } from '../../../services/api';
 import { guardarEstudiante, obtenerExpediente } from '../../../services/estudiantes';
+import ResponsableModal from '../responsables/ResponsableModal';
 import CampoFicha from './CampoFicha';
 import { SECCIONES_FICHA } from './camposFicha';
 import FormSection from './FormSection';
+import ResponsablesEstudiante from './ResponsablesEstudiante';
 import {
   TIPOS_SANGRE, construirExpediente, formularioDesde, validarFormulario,
 } from './formularioEstudiante';
@@ -40,6 +42,10 @@ export default function EstudianteModal({ estudiante, onClose, onGuardado }) {
   const [form, setForm] = useState(() => formularioDesde(estudiante));
   const [error, setError] = useState('');
   const [guardando, setGuardando] = useState(false);
+  // null mientras la sección de responsables no se abre: así no se envían ni se modifican.
+  const [responsables, setResponsables] = useState(null);
+  const [creandoResponsable, setCreandoResponsable] = useState(false);
+  const [recargaResponsables, setRecargaResponsables] = useState(0);
 
   const cambiar = useCallback((campo, valor) => {
     setForm((actual) => ({ ...actual, [campo]: valor }));
@@ -60,7 +66,13 @@ export default function EstudianteModal({ estudiante, onClose, onGuardado }) {
     setError('');
     setGuardando(true);
     try {
-      const expediente = await guardarEstudiante(estudiante?.id, construirExpediente(form));
+      const datos = construirExpediente(form);
+      if (responsables !== null) {
+        datos.responsables = responsables.map((r) => ({
+          id: r.id, es_contacto_principal: Boolean(r.es_contacto_principal),
+        }));
+      }
+      const expediente = await guardarEstudiante(estudiante?.id, datos);
       const conCuenta = form.crearUsuario ? ' Se creó su cuenta de acceso.' : '';
       onGuardado(
         `${esNuevo ? 'Estudiante registrado correctamente.' : 'Cambios guardados correctamente.'}${conCuenta}`,
@@ -260,6 +272,20 @@ export default function EstudianteModal({ estudiante, onClose, onGuardado }) {
         </FormSection>
       ))}
 
+      <FormSection
+        titulo={`Responsables${responsables ? ` (${responsables.length})` : ''}`}
+        icono={Users}
+        abiertaInicial={false}
+      >
+        <ResponsablesEstudiante
+          idEstudiante={estudiante?.id}
+          seleccionados={responsables}
+          onChange={setResponsables}
+          onCrearNuevo={() => setCreandoResponsable(true)}
+          recargar={recargaResponsables}
+        />
+      </FormSection>
+
       <FormSection titulo="Cuenta de usuario (opcional)" icono={KeyRound} abiertaInicial={false}>
         <CuentaAcceso
           idUsuario={estudiante?.id_usuario}
@@ -273,6 +299,21 @@ export default function EstudianteModal({ estudiante, onClose, onGuardado }) {
           descripcion="Opcional. Con esta cuenta el estudiante puede iniciar sesión y ver sus propias notas."
         />
       </FormSection>
+      {creandoResponsable && (
+        <ResponsableModal
+          estudiantes={[]}
+          estudiantesIniciales={estudiante
+            ? [{ ...estudiante, es_contacto_principal: (responsables || []).length === 0 }] : []}
+          onClose={() => setCreandoResponsable(false)}
+          onGuardado={(mensaje, familia) => {
+            setCreandoResponsable(false);
+            setResponsables((lista) => [...(lista || []), {
+              ...familia.responsable, estudiantes: [], es_contacto_principal: (lista || []).length === 0,
+            }]);
+            setRecargaResponsables((n) => n + 1);
+          }}
+        />
+      )}
     </Modal>
   );
 }

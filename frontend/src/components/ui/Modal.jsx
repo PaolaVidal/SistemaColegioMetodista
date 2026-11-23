@@ -1,16 +1,28 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
+
+// Modales abiertos, del más antiguo al más reciente: Escape cierra solo el de encima.
+const abiertos = [];
 
 export default function Modal({
   titulo, subtitulo, onClose, children, pie, ancho = 'max-w-2xl',
 }) {
+  const identidad = useRef(Symbol('modal'));
+  const cerrar = useRef(onClose);
+  cerrar.current = onClose;
+
   useEffect(() => {
+    const propio = identidad.current;
+    abiertos.push(propio);
     function alPresionar(evento) {
-      if (evento.key === 'Escape') onClose();
+      if (evento.key === 'Escape' && abiertos[abiertos.length - 1] === propio) cerrar.current();
     }
     window.addEventListener('keydown', alPresionar);
-    return () => window.removeEventListener('keydown', alPresionar);
-  }, [onClose]);
+    return () => {
+      window.removeEventListener('keydown', alPresionar);
+      abiertos.splice(abiertos.indexOf(propio), 1);
+    };
+  }, []);
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/80 p-4">

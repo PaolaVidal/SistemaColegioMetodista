@@ -213,7 +213,13 @@ export default function Responsables() {
             </tbody>
           </table>
         </div>
-        <Paginacion pagina={paginaActual} totalPaginas={totalPaginas} total={filtrados.length} porPagina={FILAS} onCambiar={setPagina} />
+        <Paginacion
+          pagina={paginaActual}
+          totalPaginas={totalPaginas}
+          total={filtrados.length}
+          porPagina={FILAS}
+          onCambiar={setPagina}
+        />
       </div>
 
       <p className="flex items-center gap-1 text-[11px] text-gray-500">

@@ -3,7 +3,8 @@ import {
 } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  Calendar, Check, CheckCircle, ClipboardList, Eye, Filter, GraduationCap, Layers, Pencil, Plus, RotateCcw, UserPlus, XCircle,
+  Calendar, Check, CheckCircle, ClipboardList, Eye, Filter, GraduationCap, Layers, Pencil, Plus, RotateCcw, UserPlus,
+  XCircle,
 } from 'lucide-react';
 import Alerta from '../../../components/ui/Alerta';
 import Buscador from '../../../components/ui/Buscador';
@@ -281,6 +282,8 @@ export default function Matriculas() {
           ciclos={datos.ciclos}
           secciones={datos.secciones}
           matriculas={datos.matriculas}
+          aranceles={datos.aranceles}
+          descuentos={datos.descuentos}
           onNuevoEstudiante={registrarEstudiante}
           onClose={() => setAsistente(false)}
           onRegistrada={alGuardar}

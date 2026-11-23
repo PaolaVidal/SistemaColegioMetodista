@@ -17,7 +17,6 @@ export default function RegistrarPagoModal({ cuenta, onClose, onRegistrado }) {
   const [form, setForm] = useState({
     monto: String(cuenta.saldo.toFixed(2)),
     fecha: hoy(),
-    comprobante: '',
     concepto: `Pago de ${cuenta.concepto.toLowerCase()}`.slice(0, 255),
   });
   const [error, setError] = useState('');
@@ -38,21 +37,20 @@ export default function RegistrarPagoModal({ cuenta, onClose, onRegistrado }) {
       setError(`El monto no puede superar el saldo pendiente (${dinero(cuenta.saldo)}).`);
       return;
     }
-    if (!form.comprobante.trim() || !form.concepto.trim() || !form.fecha) {
-      setError('Complete la fecha, el número de comprobante y el concepto.');
+    if (!form.concepto.trim() || !form.fecha) {
+      setError('Complete la fecha y el concepto.');
       return;
     }
     setError('');
     setGuardando(true);
     try {
-      await registrarPago({
+      const pago = await registrarPago({
         idCuenta: cuenta.id,
         monto,
         fecha: form.fecha,
-        comprobante: form.comprobante.trim(),
         concepto: form.concepto.trim(),
       });
-      onRegistrado(`Pago de ${dinero(monto)} registrado para ${nombreCompleto(cuenta.estudiante)}.`);
+      onRegistrado(`Pago de ${dinero(monto)} registrado para ${nombreCompleto(cuenta.estudiante)} con el comprobante ${pago.numero_comprobante}.`);
     } catch (e) {
       setError(mensajeError(e, 'No se pudo registrar el pago.'));
       setGuardando(false);
@@ -101,16 +99,14 @@ export default function RegistrarPagoModal({ cuenta, onClose, onRegistrado }) {
         <Field id="pago-fecha" etiqueta="Fecha de pago *">
           <input id="pago-fecha" name="fecha" type="date" className="input-field" value={form.fecha} onChange={alEscribir} />
         </Field>
-        <Field id="pago-comprobante" etiqueta="N.º de comprobante *" ancho={2}>
-          <input
-            id="pago-comprobante"
-            name="comprobante"
-            className="input-field"
-            value={form.comprobante}
-            onChange={alEscribir}
-            placeholder="Ej: COMP-000123"
-          />
-        </Field>
+        <div className="col-span-2 rounded-lg border border-line bg-card px-3 py-2">
+          <p className="font-display text-[11px] font-medium text-gray-400">N.º de comprobante</p>
+          <p className="mt-0.5 text-xs text-gray-300">
+            Se asigna automáticamente al guardar:
+            <span className="ml-1 font-mono text-brand-soft">{`REC-${hoy().replace(/-/g, '')}-####`}</span>
+            <span className="text-gray-500"> (fecha de registro + correlativo del día)</span>
+          </p>
+        </div>
         <Field id="pago-concepto" etiqueta="Concepto *" ancho={2}>
           <input
             id="pago-concepto"

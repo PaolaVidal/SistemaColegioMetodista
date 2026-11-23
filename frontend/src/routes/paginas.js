@@ -23,6 +23,9 @@ export const Comunicados = perezosa(() => import('../pages/admin/comunicados/Com
 export const Reportes = perezosa(() => import('../pages/admin/reportes/Reportes'));
 export const Auditoria = perezosa(() => import('../pages/admin/auditoria/Auditoria'));
 
+export const DashboardSecretaria = perezosa(() => import('../pages/secretaria/DashboardSecretaria'));
+export const AnunciosSecretaria = perezosa(() => import('../pages/secretaria/Anuncios'));
+
 export const PAGINAS_ADMIN = [
   { ruta: '/admin', componente: Dashboard },
   { ruta: '/admin/estudiantes', componente: Estudiantes },
@@ -40,6 +43,14 @@ export const PAGINAS_ADMIN = [
   { ruta: '/admin/auditoria', componente: Auditoria },
 ];
 
+// Secretaría reutiliza las páginas de pagos y reportes del administrador.
+export const PAGINAS_SECRETARIA = [
+  { ruta: '/secretaria', componente: DashboardSecretaria },
+  { ruta: '/secretaria/pagos', componente: Pagos },
+  { ruta: '/secretaria/reportes', componente: Reportes },
+  { ruta: '/secretaria/anuncios', componente: AnunciosSecretaria },
+];
+
 export function precargarPagina(ruta) {
-  PAGINAS_ADMIN.find((p) => p.ruta === ruta)?.componente.precargar().catch(() => {});
+  [...PAGINAS_ADMIN, ...PAGINAS_SECRETARIA].find((p) => p.ruta === ruta)?.componente.precargar().catch(() => {});
 }

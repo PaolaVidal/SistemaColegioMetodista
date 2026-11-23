@@ -16,12 +16,13 @@ function claseEnlace({ isActive }) {
   return isActive ? `${base} bg-brand/10 text-brand-soft` : `${base} text-gray-400 hover:bg-card hover:text-gray-200`;
 }
 
-export default function AdminLayout() {
+// Diseño común de los paneles (administración y secretaría); cambia solo el menú.
+export default function AdminLayout({ menu = navegacionAdmin }) {
   const [menuAbierto, setMenuAbierto] = useState(true);
   const { usuario, cerrarSesion } = useAuthStore();
   const { pathname } = useLocation();
   const navegar = useNavigate();
-  const seccion = buscarSeccion(pathname);
+  const seccion = buscarSeccion(pathname, menu);
 
   async function salir() {
     await cerrarSesion();
@@ -46,11 +47,11 @@ export default function AdminLayout() {
 
         <nav className="flex-1 overflow-y-auto px-3 py-4" aria-label="Menú principal">
           <p className="mb-2 px-2 text-[10px] font-semibold tracking-widest text-gray-600 uppercase">Menú principal</p>
-          {navegacionAdmin.map((item) => (
+          {menu.map((item) => (
             <NavLink
               key={item.ruta}
               to={item.ruta}
-              end={item.ruta === '/admin'}
+              end={item.ruta === menu[0].ruta}
               className={claseEnlace}
               onMouseEnter={() => precargarPagina(item.ruta)}
               onFocus={() => precargarPagina(item.ruta)}

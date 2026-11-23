@@ -93,7 +93,10 @@ export function TablaCuentas({
             <tr key={c.id} className="group border-b border-line transition-colors hover:bg-line/30">
               <td className="px-4 py-3"><CeldaEstudiante estudiante={c.estudiante} alerta={c.estado} /></td>
               <td className="px-4 py-3">
-                <span className="flex items-center gap-2 text-gray-300"><Icono size={12} className="text-brand-soft" />{c.concepto}</span>
+                <span className="flex items-center gap-2 text-gray-300">
+                  <Icono size={12} className="text-brand-soft" />{c.concepto}
+                  {c.conDescuento && <span className="rounded-full bg-[#10B98120] px-1.5 py-0.5 text-[9px] font-semibold text-[#10B981]">Descuento</span>}
+                </span>
               </td>
               <td className="px-4 py-3 whitespace-nowrap text-gray-400">{fechaCorta(c.fecha_vencimiento)}</td>
               <td className="px-4 py-3">

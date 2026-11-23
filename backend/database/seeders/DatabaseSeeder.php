@@ -24,6 +24,9 @@ class DatabaseSeeder extends Seeder
                 $adminUsers[] = $this->createUser($roles['Administrador'], "admin{$index}", "admin{$index}@colegiometodista.test");
             }
             DB::select("SELECT set_config('app.usuario_id', ?, true), set_config('app.origen', 'seeder', true)", [(string) $adminUsers[0]]);
+            foreach (range(1, 2) as $index) {
+                $this->createUser($roles['Secretaría'], "secretaria{$index}", "secretaria{$index}@colegiometodista.test");
+            }
 
             $cycles = [];
             foreach ([2025, 2026] as $year) {
@@ -338,24 +341,33 @@ class DatabaseSeeder extends Seeder
             }
 
             $fees = [];
+            $feeAmounts = [];
+            $monthlyFees = [];
             foreach ($cycles as $cycleId) {
-                foreach ([['Matrícula', 150], ['Mensualidad', 85], ['Materiales', 40]] as [$concept, $amount]) {
-                    $fees[] = DB::table('aranceles_base')->insertGetId([
+                // Aranceles base del sistema (protegidos); los demás los crea el colegio desde Pagos → Aranceles.
+                foreach ([['Matrícula', 150], ['Mensualidad', 85]] as [$concept, $amount]) {
+                    $fees[] = $feeId = DB::table('aranceles_base')->insertGetId([
                         'id_ciclo' => $cycleId,
                         'nombre_concepto' => $concept,
                         'monto_estandar' => $amount,
                         'dia_vencimiento_mes' => 10,
                         'recargo_mora' => 10,
+                        'tipo_cobro' => $concept === 'Mensualidad' ? 'mensual' : 'unico',
+                        'protegido' => true,
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]);
+                    $feeAmounts[$feeId] = $amount;
+                    if ($concept === 'Mensualidad') {
+                        $monthlyFees[$cycleId] = $feeId;
+                    }
                 }
             }
             foreach (array_slice($students, 0, 30) as $studentId) {
                 $accountId = DB::table('cuentas_por_cobrar')->insertGetId([
                     'id_estudiante' => $studentId,
-                    'id_arancel' => $fees[$studentId % count($fees)],
-                    'concepto' => 'Mensualidad de septiembre',
+                    'id_arancel' => $monthlyFees[$cycles[2026]],
+                    'concepto' => 'Mensualidad de septiembre 2026',
                     'monto_original' => 85,
                     'monto_mora' => 0,
                     'saldo_pendiente' => 85,
@@ -381,7 +393,7 @@ class DatabaseSeeder extends Seeder
                     'id_estudiante' => $studentId,
                     'id_arancel' => $fees[$index % count($fees)],
                     'porcentaje_descuento' => 10,
-                    'monto_fijo_ajustado' => 76.50,
+                    'monto_fijo_ajustado' => round($feeAmounts[$fees[$index % count($fees)]] * 0.9, 2),
                     'motivo' => 'Descuento por hermanos matriculados',
                     'created_at' => now(),
                     'updated_at' => now(),
