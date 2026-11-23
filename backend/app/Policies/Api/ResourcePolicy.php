@@ -19,7 +19,7 @@ class ResourcePolicy
 
     private const SECRETARIA = [
         'cuentas_por_cobrar' => 'CRUD', 'pagos' => 'CRUD',
-        'descuentos_alumnos' => 'CRUD', 'aranceles_base' => 'R',
+        'descuentos_alumnos' => 'CRUD', 'aranceles_base' => 'CRUD',
         'estudiantes' => 'CRU', 'responsables' => 'CRU',
         'estudiante_responsable' => 'CRU', 'matriculas' => 'CRU',
         'ficha_estudiante' => 'CRU', 'documentos_estudiantes' => 'CRUD',
@@ -28,6 +28,8 @@ class ResourcePolicy
         'ciclos' => 'R', 'asignaciones_cursos' => 'R', 'horarios' => 'R',
         'calificaciones' => 'R', 'asistencias' => 'R', 'tareas' => 'R',
         'evaluaciones' => 'R', 'demeritos' => 'R',
+        // Los reportes de calificaciones y asistencia muestran el docente de cada asignatura.
+        'docente' => 'R',
     ];
 
     private const FAMILIA = [

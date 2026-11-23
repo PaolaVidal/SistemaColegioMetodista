@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Finanzas;
 
 use App\Http\Controllers\Api\Support\CrudController;
+use App\Services\CuentasCobroService;
 use App\Services\PagoNotificacionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -12,14 +13,27 @@ class PagoController extends CrudController
 {
     protected string $tabla = 'pagos';
 
+    private const COMPROBANTE_AUTOMATICO = '__automatico__';
+
     public function store(Request $request)
     {
+        // El comprobante se numera solo (REC-AAAAMMDD-0001); se ignora uno enviado a mano.
         $request->merge([
             'registrado_por' => $request->user()->id,
             'fecha_pago' => $request->input('fecha_pago', now()->toDateString()),
+            'numero_comprobante' => self::COMPROBANTE_AUTOMATICO,
         ]);
 
         return parent::store($request);
+    }
+
+    protected function preparar(array $datos): array
+    {
+        if (($datos['numero_comprobante'] ?? null) === self::COMPROBANTE_AUTOMATICO) {
+            $datos['numero_comprobante'] = app(CuentasCobroService::class)->siguienteComprobante();
+        }
+
+        return $datos;
     }
 
     protected function reglasAdicionales(): array
@@ -52,18 +66,7 @@ class PagoController extends CrudController
     protected function despuesDeGuardar(?object $anterior, ?object $nuevo): void
     {
         foreach (array_unique(array_filter([$anterior?->id_cuenta_cobrar, $nuevo?->id_cuenta_cobrar])) as $cuentaId) {
-            $cuenta = DB::table('cuentas_por_cobrar')->where('id', $cuentaId)->lockForUpdate()->first();
-            if (! $cuenta) {
-                continue;
-            }
-            $abonado = (float) DB::table('pagos')->where('id_cuenta_cobrar', $cuentaId)->sum('monto_pago');
-            $saldo = max(0, round((float) $cuenta->monto_original + (float) $cuenta->monto_mora - $abonado, 2));
-            $estado = $saldo <= 0 ? 'pagado' : ($cuenta->fecha_vencimiento < now()->toDateString() ? 'vencido' : 'pendiente');
-            DB::table('cuentas_por_cobrar')->where('id', $cuentaId)->update([
-                'saldo_pendiente' => $saldo,
-                'estado' => $estado,
-                'updated_at' => now(),
-            ]);
+            app(CuentasCobroService::class)->recalcularSaldo((int) $cuentaId);
         }
 
         if ($anterior === null && $nuevo !== null) {

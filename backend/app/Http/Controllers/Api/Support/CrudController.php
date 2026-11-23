@@ -14,6 +14,9 @@ use Illuminate\Validation\ValidationException;
 
 abstract class CrudController extends Controller
 {
+    /** El panel descarga catálogos completos; 500 filas por página reduce las solicitudes. */
+    private const MAXIMO_POR_PAGINA = 500;
+
     protected string $tabla;
 
     public function index(Request $request)
@@ -35,7 +38,7 @@ abstract class CrudController extends Controller
         }
 
         $resultados = $consulta->orderBy($orden, $direccion)
-            ->paginate(min(max((int) $request->query('por_pagina', 25), 1), 100));
+            ->paginate(min(max((int) $request->query('por_pagina', 25), 1), self::MAXIMO_POR_PAGINA));
         $resultados->getCollection()->transform(fn ($registro) => $this->presentar($registro));
 
         return response()->json($resultados);
@@ -129,6 +132,11 @@ abstract class CrudController extends Controller
         return [];
     }
 
+    protected function mensajesValidacion(): array
+    {
+        return [];
+    }
+
     private function contextoAuditoria(): void
     {
         if ($this->tabla === 'calificaciones') {
@@ -184,7 +192,7 @@ abstract class CrudController extends Controller
             $reglas[$campo] = array_merge($base, $this->reglaTipo($columna), $this->reglasAdicionales()[$campo] ?? []);
         }
 
-        $datos = Validator::make($entrada, $reglas)->validate();
+        $datos = Validator::make($entrada, $reglas, $this->mensajesValidacion())->validate();
         foreach (Schema::getForeignKeys($this->tabla) as $foranea) {
             if (count($foranea['columns']) !== 1 || count($foranea['foreign_columns']) !== 1) {
                 continue;

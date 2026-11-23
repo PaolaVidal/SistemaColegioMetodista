@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\Administracion\ResponsableController;
 use App\Http\Controllers\Api\Administracion\RoleController;
 use App\Http\Controllers\Api\Administracion\UsuarioController;
 use App\Http\Controllers\Api\ExpedienteEstudianteController;
+use App\Http\Controllers\Api\ExpedienteResponsableController;
 use Illuminate\Support\Facades\Route;
 
 Route::apiResource('roles', RoleController::class)->parameters(['roles' => 'registro'])->middleware('permiso:roles');
@@ -34,3 +35,8 @@ Route::get('expedientes', [ExpedienteEstudianteController::class, 'index'])->mid
 Route::post('expedientes', [ExpedienteEstudianteController::class, 'store'])->middleware('permiso:estudiantes');
 Route::get('expedientes/{estudiante}', [ExpedienteEstudianteController::class, 'show'])->middleware('permiso:estudiantes');
 Route::put('expedientes/{estudiante}', [ExpedienteEstudianteController::class, 'update'])->middleware('permiso:estudiantes');
+
+Route::post('familias', [ExpedienteResponsableController::class, 'store'])->middleware('permiso:responsables');
+Route::get('familias/{responsable}', [ExpedienteResponsableController::class, 'show'])->middleware('permiso:responsables');
+Route::put('familias/{responsable}', [ExpedienteResponsableController::class, 'update'])->middleware('permiso:responsables');
+Route::get('cuentas/sugerir-nombre', [ExpedienteResponsableController::class, 'sugerirNombreUsuario'])->middleware('permiso:usuarios');

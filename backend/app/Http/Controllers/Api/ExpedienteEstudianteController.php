@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Policies\Api\ResourcePolicy;
+use App\Support\CuentasUsuario;
+use App\Support\Formatos;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -42,6 +44,9 @@ class ExpedienteEstudianteController extends Controller
             app(ResourcePolicy::class)->autorizar($request->user(), 'responsables', 'C');
             app(ResourcePolicy::class)->autorizar($request->user(), 'estudiante_responsable', 'C');
         }
+        if ($request->exists('usuario')) {
+            app(ResourcePolicy::class)->autorizar($request->user(), 'usuarios', 'C');
+        }
         $data = $this->validar($request);
 
         $id = DB::transaction(function () use ($data) {
@@ -77,6 +82,9 @@ class ExpedienteEstudianteController extends Controller
             $politica->autorizar($request->user(), 'responsables', 'U');
             $politica->autorizar($request->user(), 'estudiante_responsable', 'U');
         }
+        if ($request->exists('usuario')) {
+            $politica->autorizar($request->user(), 'usuarios', 'C');
+        }
         abort_if(DB::table('estudiantes')->where('id', $estudiante)->doesntExist(), 404);
         $data = $this->validar($request, $estudiante);
 
@@ -99,8 +107,11 @@ class ExpedienteEstudianteController extends Controller
         $usuario = request()->user();
         $puedeVerResponsables = $politica->rol($usuario) !== 'docente';
 
+        $puedeVerUsuario = in_array($politica->rol($usuario), ['administrador', 'secretaria'], true);
+
         return [
             'estudiante' => $datosEstudiante,
+            'usuario' => $puedeVerUsuario ? CuentasUsuario::resumen($datosEstudiante->id_usuario) : null,
             'ficha' => $politica->consulta($usuario, 'ficha_estudiante')->where('id_estudiante', $estudiante)->first(),
             'responsables' => $puedeVerResponsables ? $politica->consulta($usuario, 'responsables')
                 ->join('estudiante_responsable', 'responsables.id', '=', 'estudiante_responsable.id_responsable')
@@ -121,6 +132,10 @@ class ExpedienteEstudianteController extends Controller
 
     private function guardarDatosComplementarios(int $estudiante, array $data): void
     {
+        if (array_key_exists('usuario', $data)) {
+            $this->crearUsuario($estudiante, $data['usuario']);
+        }
+
         if (array_key_exists('ficha', $data)) {
             DB::table('ficha_estudiante')->updateOrInsert(
                 ['id_estudiante' => $estudiante],
@@ -163,13 +178,34 @@ class ExpedienteEstudianteController extends Controller
         }
     }
 
+    // Crea la cuenta de acceso con rol Estudiante y la vincula al expediente.
+    private function crearUsuario(int $estudiante, array $usuario): void
+    {
+        if (DB::table('estudiantes')->where('id', $estudiante)->value('id_usuario') !== null) {
+            throw ValidationException::withMessages(['usuario' => 'El estudiante ya tiene un usuario asociado.']);
+        }
+
+        // El correo de la cuenta es siempre el mismo del estudiante.
+        $datos = DB::table('estudiantes')->where('id', $estudiante)->first(['nombres', 'apellidos', 'correo']);
+        $usuario['correo'] = $datos->correo;
+        $idUsuario = CuentasUsuario::crear(['estudiante'], $usuario, $datos->nombres, $datos->apellidos);
+        DB::table('estudiantes')->where('id', $estudiante)->update(['id_usuario' => $idUsuario]);
+    }
+
     private function validar(Request $request, ?int $estudiante = null): array
     {
-        $data = $request->validate([
+        $idUsuario = $estudiante ? DB::table('estudiantes')->where('id', $estudiante)->value('id_usuario') : null;
+        $conCuenta = $idUsuario !== null || $request->exists('usuario');
+        $reglasCorreo = [$conCuenta ? 'required' : 'nullable', 'email', 'max:50', Rule::unique('estudiantes', 'correo')->ignore($estudiante)];
+        if ($conCuenta) {
+            $reglasCorreo[] = Rule::unique('usuarios', 'correo')->ignore($idUsuario);
+        }
+
+        $data = $request->validate(CuentasUsuario::reglas('usuario', false) + [
             'codigo_nie' => ['required', 'string', 'max:10', Rule::unique('estudiantes', 'codigo_nie')->ignore($estudiante)],
             'nombres' => ['required', 'string', 'max:30'],
             'apellidos' => ['required', 'string', 'max:30'],
-            'correo' => ['nullable', 'email', 'max:50', Rule::unique('estudiantes', 'correo')->ignore($estudiante)],
+            'correo' => $reglasCorreo,
             'activo' => ['required', 'boolean'],
             'ficha' => ['sometimes', 'array'],
             'ficha.fecha_nacimiento' => ['required_with:ficha', 'date'],
@@ -208,16 +244,16 @@ class ExpedienteEstudianteController extends Controller
             'ficha.carta_pastoral' => ['nullable', 'boolean'],
             'ficha.nombre_iglesia_asiste' => ['nullable', 'string'],
             'ficha.nombre_madre' => ['nullable', 'string', 'max:60'],
-            'ficha.dui_madre' => ['nullable', 'string', 'max:10'],
+            'ficha.dui_madre' => ['nullable', 'string', Formatos::DUI],
             'ficha.profesion_madre' => ['nullable', 'string'],
-            'ficha.telefono_madre' => ['nullable', 'string', 'max:8'],
+            'ficha.telefono_madre' => ['nullable', 'string', Formatos::TELEFONO],
             'ficha.direccion_madre' => ['nullable', 'string'],
             'ficha.fecha_nacimiento_madre' => ['nullable', 'date'],
             'ficha.lugar_trabajo_madre' => ['nullable', 'string'],
             'ficha.nombre_padre' => ['nullable', 'string', 'max:60'],
-            'ficha.dui_padre' => ['nullable', 'string', 'max:10'],
+            'ficha.dui_padre' => ['nullable', 'string', Formatos::DUI],
             'ficha.profesion_padre' => ['nullable', 'string'],
-            'ficha.telefono_padre' => ['nullable', 'string', 'max:8'],
+            'ficha.telefono_padre' => ['nullable', 'string', Formatos::TELEFONO],
             'ficha.direccion_padre' => ['nullable', 'string'],
             'ficha.fecha_nacimiento_padre' => ['nullable', 'date'],
             'ficha.lugar_trabajo_padre' => ['nullable', 'string'],
@@ -231,10 +267,15 @@ class ExpedienteEstudianteController extends Controller
             'responsables.*.parentesco' => ['nullable', 'string', 'max:20'],
             'responsables.*.activo' => ['nullable', 'boolean'],
             'responsables.*.es_contacto_principal' => ['nullable', 'boolean'],
-        ]);
+        ], [
+            'correo.required' => 'Para crear la cuenta de usuario el estudiante debe tener correo electrónico.',
+            'correo.unique' => 'Ese correo ya está registrado en otro estudiante o en otra cuenta de usuario.',
+        ] + Formatos::mensajes([
+            'ficha.dui_madre' => 'dui', 'ficha.dui_padre' => 'dui', 'ficha.telefono_madre' => 'telefono', 'ficha.telefono_padre' => 'telefono',
+        ]));
 
-        $data = ['estudiante' => collect($data)->except(['ficha', 'responsables'])->all()]
-            + collect($data)->only(['ficha', 'responsables'])->all();
+        $data = ['estudiante' => collect($data)->except(['ficha', 'responsables', 'usuario'])->all()]
+            + collect($data)->only(['ficha', 'responsables', 'usuario'])->all();
         if (isset($data['responsables']) && collect($data['responsables'])->where('es_contacto_principal', true)->count() > 1) {
             throw ValidationException::withMessages([
                 'responsables' => 'Solo puede haber un responsable como contacto principal.',

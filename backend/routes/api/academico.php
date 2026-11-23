@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\Academico\SeccionController;
 use App\Http\Controllers\Api\Academico\TareaController;
 use App\Http\Controllers\Api\AsistenciaController;
 use App\Http\Controllers\Api\CalificacionController;
+use App\Http\Controllers\Api\InscripcionController;
 use Illuminate\Support\Facades\Route;
 
 Route::apiResource('secciones', SeccionController::class)->parameters(['secciones' => 'registro'])->middleware('permiso:secciones');
@@ -30,3 +31,5 @@ Route::put('evaluaciones/{evaluacion}/calificaciones', [CalificacionController::
 Route::get('asignaciones/{asignacion}/asistencias', [AsistenciaController::class, 'index'])->middleware('permiso:asistencias');
 Route::put('asignaciones/{asignacion}/asistencias/{fecha}', [AsistenciaController::class, 'registrar'])->middleware('permiso:asistencias');
 Route::get('estudiantes/{estudiante}/asistencias', [AsistenciaController::class, 'historialEstudiante'])->middleware('permiso:asistencias');
+
+Route::post('inscripciones', [InscripcionController::class, 'store'])->middleware('permiso:matriculas');

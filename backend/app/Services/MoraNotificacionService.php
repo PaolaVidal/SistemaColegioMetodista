@@ -28,6 +28,8 @@ class MoraNotificacionService
                 DB::table('cuentas_por_cobrar')->where('id', $cuentaId)
                     ->update(['estado' => 'vencido', 'updated_at' => now()]);
             }
+            // Recargo por mora del arancel (una sola vez por cuenta).
+            app(CuentasCobroService::class)->aplicarMora($cuentaId);
 
             DB::table('alertas_mora')->insertOrIgnore([
                 'id_cuenta_cobrar' => $cuentaId,
