@@ -20,7 +20,12 @@ RUN apt-get update && apt-get install -y \
 
 COPY . /var/www/html
 
-RUN composer install --no-interaction --prefer-dist --no-progress
+# Las descargas desde GitHub a veces fallan de forma temporal (HTTP 5xx): se reintenta antes de fallar.
+RUN for intento in 1 2 3; do \
+      composer install --no-interaction --prefer-dist --no-progress && break; \
+      echo "composer install falló (intento $intento); reintentando en 15 s..."; sleep 15; \
+    done \
+    && test -f vendor/autoload.php
 
 EXPOSE 8000
 
