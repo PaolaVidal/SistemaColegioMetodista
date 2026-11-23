@@ -1,0 +1,43 @@
+{
+  "id": "colegiometodista-bajo-rendimiento",
+  "name": "Colegio Metodista - alerta de bajo rendimiento",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "bajo-rendimiento",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "7c80e21d-4af9-4679-a8c1-b4a2e439284a",
+      "name": "Promedio bajo",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "4f5d5e2d-6a50-4e0a-a3c9-5ca093bd49da"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://mailpit:8025/api/v1/send",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { From: { Email: 'no-reply@colegiometodista.test', Name: 'Colegio Metodista' }, To: [{ Email: $json.body.correo }], Subject: $json.body.asunto, Text: $json.body.contenido } }}",
+        "options": {}
+      },
+      "id": "fd2e604e-2223-49cc-a52c-3f03cdbd509b",
+      "name": "Enviar alerta a Mailpit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300]
+    }
+  ],
+  "connections": {
+    "Promedio bajo": {
+      "main": [[{"node": "Enviar alerta a Mailpit", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {"executionOrder": "v1"},
+  "active": false,
+  "pinData": {}
+}

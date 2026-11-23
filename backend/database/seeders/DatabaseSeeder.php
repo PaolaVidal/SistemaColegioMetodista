@@ -14,13 +14,18 @@ class DatabaseSeeder extends Seeder
 
         DB::transaction(function () use ($faker): void {
             $roles = [];
-            foreach (['Administrador', 'Docente', 'Encargado', 'Estudiante'] as $name) {
-                $roles[$name] = DB::table('roles')->insertGetId(['nombre' => $name]);
+            foreach (['Administrador', 'Docente', 'Secretaría', 'Encargado', 'Estudiante'] as $name) {
+                $roles[$name] = DB::table('roles')->where('nombre', $name)->value('id')
+                    ?? DB::table('roles')->insertGetId(['nombre' => $name]);
             }
 
             $adminUsers = [];
             foreach (range(1, 4) as $index) {
                 $adminUsers[] = $this->createUser($roles['Administrador'], "admin{$index}", "admin{$index}@colegiometodista.test");
+            }
+            DB::select("SELECT set_config('app.usuario_id', ?, true), set_config('app.origen', 'seeder', true)", [(string) $adminUsers[0]]);
+            foreach (range(1, 2) as $index) {
+                $this->createUser($roles['Secretaría'], "secretaria{$index}", "secretaria{$index}@colegiometodista.test");
             }
 
             $cycles = [];
@@ -61,7 +66,7 @@ class DatabaseSeeder extends Seeder
                     'dui' => $faker->unique()->numerify('########-#'),
                     'nombres' => $faker->firstName(),
                     'apellidos' => $faker->lastName(),
-                    'telefono' => $faker->numerify('########'),
+                    'telefono' => $faker->numerify('####-####'),
                     'numero_isss' => $faker->unique()->numerify('###############'),
                     'afp' => $faker->unique()->numerify('AFP-###########'),
                     'activo' => true,
@@ -80,7 +85,8 @@ class DatabaseSeeder extends Seeder
                     'codigo_nie' => $faker->unique()->numerify('##########'),
                     'nombres' => $faker->firstName(),
                     'apellidos' => $lastName,
-                    'correo' => "familia{$index}@colegiometodista.test",
+                    // Mismo correo que su cuenta: ambos campos guardan siempre el mismo valor.
+                    'correo' => "estudiante{$index}@colegiometodista.test",
                     'activo' => true,
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -93,7 +99,7 @@ class DatabaseSeeder extends Seeder
                     'nombres' => $faker->firstName(),
                     'apellidos' => $lastName,
                     'dui' => $faker->unique()->numerify('########-#'),
-                    'telefono' => $faker->numerify('########'),
+                    'telefono' => $faker->numerify('####-####'),
                     'correo' => "familia{$index}@colegiometodista.test",
                     'parentesco' => $index % 3 === 0 ? 'Madre' : 'Padre',
                     'activo' => true,
@@ -145,14 +151,14 @@ class DatabaseSeeder extends Seeder
                     'nombre_madre' => $isFemale ? 'María' : 'Ana',
                     'dui_madre' => $faker->unique()->numerify('########-#'),
                     'profesion_madre' => 'Comerciante',
-                    'telefono_madre' => $faker->numerify('########'),
+                    'telefono_madre' => $faker->numerify('####-####'),
                     'direccion_madre' => 'San Salvador',
                     'fecha_nacimiento_madre' => now()->subYears(35 + ($index % 15))->toDateString(),
                     'lugar_trabajo_madre' => 'Negocio familiar',
                     'nombre_padre' => $isFemale ? 'Carlos' : 'José',
                     'dui_padre' => $faker->unique()->numerify('########-#'),
                     'profesion_padre' => 'Empleado',
-                    'telefono_padre' => $faker->numerify('########'),
+                    'telefono_padre' => $faker->numerify('####-####'),
                     'direccion_padre' => 'San Salvador',
                     'fecha_nacimiento_padre' => now()->subYears(38 + ($index % 15))->toDateString(),
                     'lugar_trabajo_padre' => 'Empresa privada',
@@ -221,18 +227,22 @@ class DatabaseSeeder extends Seeder
                         'cycle_id' => $section['cycle_id'],
                         'section_id' => $section['id'],
                         'teacher_id' => $teacherId,
+                        'subject_index' => $subjectIndex,
                     ];
                 }
             }
 
             // ---------------------------------------------------------------
-            // Franjas horarias disponibles por día. Para cada asignación de
-            // curso se busca la primera franja (día + periodo) que el
-            // docente de esa asignación todavía no tenga ocupada, evitando
-            // así cualquier traslape. Si un docente llegara a llenar todas
-            // las franjas de la semana, se lanza una excepción clara en vez
+            // Franjas horarias disponibles por día. Cada asignatura recibe
+            // varias clases por semana, cada una en un día distinto, en una
+            // franja libre tanto para el docente como para la sección: así
+            // ningún docente se traslapa y ninguna sección tiene dos clases
+            // a la vez. Los días y periodos de inicio rotan según la
+            // asignatura para repartir las clases por toda la semana. Si no
+            // quedara una franja válida, se lanza una excepción clara en vez
             // de insertar un horario inválido en silencio.
             // ---------------------------------------------------------------
+            $sessionsPerSubject = 4;
             $days = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'];
             $periods = [
                 ['07:30', '08:20'],
@@ -247,37 +257,51 @@ class DatabaseSeeder extends Seeder
             // distintos no compiten por la misma franja real), igual que
             // ahora lo permite el trigger fn_check_horario_solapado.
             $teacherScheduleUsed = []; // [id_ciclo][id_docente][dia_semana][period_index] => true
+            $sectionScheduleUsed = []; // [id_seccion][dia_semana][period_index] => true
 
             foreach ($assignments as $assignment) {
                 $sectionEnrollments = $enrollments[$assignment['cycle_id']][$assignment['section_id']] ?? [];
                 $teacherId = $assignment['teacher_id'];
                 $cycleId = $assignment['cycle_id'];
+                $sectionId = $assignment['section_id'];
+                $subjectIndex = $assignment['subject_index'];
+                $usedDays = [];
 
-                $slot = null;
-                foreach ($days as $day) {
-                    foreach ($periods as $periodIndex => $period) {
-                        if (empty($teacherScheduleUsed[$cycleId][$teacherId][$day][$periodIndex])) {
-                            $slot = ['day' => $day, 'period' => $period, 'index' => $periodIndex];
-                            break 2;
+                foreach (range(0, $sessionsPerSubject - 1) as $session) {
+                    $slot = null;
+                    foreach (range(0, count($days) - 1) as $dayOffset) {
+                        $day = $days[($subjectIndex + $session + $dayOffset) % count($days)];
+                        if (isset($usedDays[$day])) {
+                            continue;
+                        }
+                        foreach (range(0, count($periods) - 1) as $periodOffset) {
+                            $periodIndex = ($subjectIndex + $periodOffset) % count($periods);
+                            if (empty($teacherScheduleUsed[$cycleId][$teacherId][$day][$periodIndex])
+                                && empty($sectionScheduleUsed[$sectionId][$day][$periodIndex])) {
+                                $slot = ['day' => $day, 'period' => $periods[$periodIndex], 'index' => $periodIndex];
+                                break 2;
+                            }
                         }
                     }
+
+                    if ($slot === null) {
+                        throw new \RuntimeException(
+                            "No quedan franjas horarias libres para el docente {$teacherId} y la sección {$sectionId} ".
+                            "en el ciclo {$cycleId}. Agrega más periodos por día o reduce las clases por asignatura."
+                        );
+                    }
+
+                    $teacherScheduleUsed[$cycleId][$teacherId][$slot['day']][$slot['index']] = true;
+                    $sectionScheduleUsed[$sectionId][$slot['day']][$slot['index']] = true;
+                    $usedDays[$slot['day']] = true;
+
+                    DB::table('horarios')->insert([
+                        'id_asignacion_curso' => $assignment['id'],
+                        'dia_semana' => $slot['day'],
+                        'hora_inicio' => $slot['period'][0],
+                        'hora_fin' => $slot['period'][1],
+                    ]);
                 }
-
-                if ($slot === null) {
-                    throw new \RuntimeException(
-                        "No quedan franjas horarias libres para el docente {$teacherId} en el ciclo {$cycleId}. ".
-                        'Agrega más periodos por día o más docentes en el seeder.'
-                    );
-                }
-
-                $teacherScheduleUsed[$cycleId][$teacherId][$slot['day']][$slot['index']] = true;
-
-                DB::table('horarios')->insert([
-                    'id_asignacion_curso' => $assignment['id'],
-                    'dia_semana' => $slot['day'],
-                    'hora_inicio' => $slot['period'][0],
-                    'hora_fin' => $slot['period'][1],
-                ]);
 
                 foreach (range(1, 3) as $period) {
                     $evaluationId = DB::table('evaluaciones')->insertGetId([
@@ -317,24 +341,33 @@ class DatabaseSeeder extends Seeder
             }
 
             $fees = [];
+            $feeAmounts = [];
+            $monthlyFees = [];
             foreach ($cycles as $cycleId) {
-                foreach ([['Matrícula', 150], ['Mensualidad', 85], ['Materiales', 40]] as [$concept, $amount]) {
-                    $fees[] = DB::table('aranceles_base')->insertGetId([
+                // Aranceles base del sistema (protegidos); los demás los crea el colegio desde Pagos → Aranceles.
+                foreach ([['Matrícula', 150], ['Mensualidad', 85]] as [$concept, $amount]) {
+                    $fees[] = $feeId = DB::table('aranceles_base')->insertGetId([
                         'id_ciclo' => $cycleId,
                         'nombre_concepto' => $concept,
                         'monto_estandar' => $amount,
                         'dia_vencimiento_mes' => 10,
                         'recargo_mora' => 10,
+                        'tipo_cobro' => $concept === 'Mensualidad' ? 'mensual' : 'unico',
+                        'protegido' => true,
                         'created_at' => now(),
                         'updated_at' => now(),
                     ]);
+                    $feeAmounts[$feeId] = $amount;
+                    if ($concept === 'Mensualidad') {
+                        $monthlyFees[$cycleId] = $feeId;
+                    }
                 }
             }
             foreach (array_slice($students, 0, 30) as $studentId) {
                 $accountId = DB::table('cuentas_por_cobrar')->insertGetId([
                     'id_estudiante' => $studentId,
-                    'id_arancel' => $fees[$studentId % count($fees)],
-                    'concepto' => 'Mensualidad de septiembre',
+                    'id_arancel' => $monthlyFees[$cycles[2026]],
+                    'concepto' => 'Mensualidad de septiembre 2026',
                     'monto_original' => 85,
                     'monto_mora' => 0,
                     'saldo_pendiente' => 85,
@@ -360,7 +393,7 @@ class DatabaseSeeder extends Seeder
                     'id_estudiante' => $studentId,
                     'id_arancel' => $fees[$index % count($fees)],
                     'porcentaje_descuento' => 10,
-                    'monto_fijo_ajustado' => 76.50,
+                    'monto_fijo_ajustado' => round($feeAmounts[$fees[$index % count($fees)]] * 0.9, 2),
                     'motivo' => 'Descuento por hermanos matriculados',
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -402,15 +435,6 @@ class DatabaseSeeder extends Seeder
                     'estado_envio' => 'enviado',
                     'created_at' => now(),
                 ]);
-                DB::table('auditoria')->insert([
-                    'id_usuario' => $userId,
-                    'id_registro' => $userId,
-                    'accion' => 'Crear',
-                    'nombre_tabla' => 'usuarios',
-                    'valor_anterior' => null,
-                    'valor_nuevo' => json_encode(['id' => $userId]),
-                    'fecha_creacion' => now(),
-                ]);
             }
         });
     }
@@ -421,7 +445,7 @@ class DatabaseSeeder extends Seeder
             'id_rol' => $roleId,
             'nombre_usuario' => $username,
             'correo' => $email,
-            'contrasena' => Hash::make('password'),
+            'contrasena' => Hash::make('password123'),
             'activo' => true,
             'created_at' => now(),
             'updated_at' => now(),

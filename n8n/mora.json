@@ -1,0 +1,43 @@
+{
+  "id": "colegiometodista-mora",
+  "name": "Colegio Metodista - aviso de cuenta vencida",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "aviso-mora",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "987c52e4-5e68-4fd5-9b7c-480d640b1302",
+      "name": "Cuenta vencida",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "4c3e1080-03e4-4697-a37c-9594c5c81141"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://mailpit:8025/api/v1/send",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { From: { Email: 'no-reply@colegiometodista.test', Name: 'Colegio Metodista' }, To: [{ Email: $json.body.correo }], Subject: $json.body.asunto, Text: $json.body.contenido } }}",
+        "options": {}
+      },
+      "id": "071f47f5-a709-40a7-ae55-6e5b0f0cdf6c",
+      "name": "Enviar aviso a Mailpit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300]
+    }
+  ],
+  "connections": {
+    "Cuenta vencida": {
+      "main": [[{"node": "Enviar aviso a Mailpit", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {"executionOrder": "v1"},
+  "active": false,
+  "pinData": {}
+}

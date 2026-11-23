@@ -1,0 +1,43 @@
+{
+  "id": "colegiometodista-pago-registrado",
+  "name": "Colegio Metodista - correo por pago registrado",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "pago-registrado",
+        "responseMode": "lastNode",
+        "options": {}
+      },
+      "id": "5b8a6fa8-369e-4a98-9a94-a1ee6af34651",
+      "name": "Pago registrado",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "2c956454-c7ac-43f4-8970-2409f6d048a9"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://mailpit:8025/api/v1/send",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { From: { Email: 'no-reply@colegiometodista.test', Name: 'Colegio Metodista' }, To: [{ Email: $json.body.correo }], Subject: $json.body.asunto, Text: $json.body.contenido } }}",
+        "options": {}
+      },
+      "id": "6589796c-ef45-483c-9d73-65c084f60810",
+      "name": "Enviar a Mailpit",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 300]
+    }
+  ],
+  "connections": {
+    "Pago registrado": {
+      "main": [[{"node": "Enviar a Mailpit", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {"executionOrder": "v1"},
+  "active": false,
+  "pinData": {}
+}
